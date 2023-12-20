@@ -3,7 +3,6 @@ const withTM = require("next-transpile-modules")([
   "@stripe-discord/ui",
   "@stripe-discord/types",
   "@stripe-discord/db-lib",
-  "@fontsource/roboto",
 ]);
 
 /** @type {import('next').NextConfig} */
