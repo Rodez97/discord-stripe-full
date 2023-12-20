@@ -4,7 +4,7 @@ import { ThemeOptions, ThemeProvider, createTheme } from "@mui/material/styles";
 import { CssBaseline } from "@mui/material";
 import Body from "@stripe-discord/ui/components/Body";
 
-export const themeOptions: ThemeOptions = {
+const themeOptions: ThemeOptions = {
   palette: {
     mode: "dark",
     primary: {
