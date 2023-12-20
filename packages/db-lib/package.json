@@ -1,0 +1,11 @@
+{
+  "name": "@stripe-discord/db-lib",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "types": "index.ts",
+  "devDependencies": {
+    "@stripe-discord/lib": "*",
+    "@stripe-discord/types": "*",
+    "firebase-admin": "^12.0.0"
+  }
+}

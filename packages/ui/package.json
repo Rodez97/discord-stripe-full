@@ -1,0 +1,13 @@
+{
+  "name": "@stripe-discord/ui",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "types": "index.ts",
+  "devDependencies": {
+    "@babel/runtime": "^7.23.6",
+    "@mui/material": "^5.15.1",
+    "next": "^14.0.4",
+    "react": "^18.2.0",
+    "typescript": "latest"
+  }
+}
