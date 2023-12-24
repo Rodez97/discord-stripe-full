@@ -3,7 +3,6 @@ import { Box, Button, Typography } from "@mui/material";
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import logoImg from "../../public/Logo/LogoWS.png";
 import StarIcon from "@mui/icons-material/Star";
 
 export default function SubscribeSection() {
@@ -18,7 +17,12 @@ export default function SubscribeSection() {
         justifyContent: "center",
       }}
     >
-      <Image src={logoImg} alt="Logo" width={113.16 * 3} height={40 * 3} />
+      <Image
+        src="/images/logo.png"
+        alt="Logo"
+        width={113.16 * 3}
+        height={40 * 3}
+      />
       <Typography
         variant="h5"
         sx={{
