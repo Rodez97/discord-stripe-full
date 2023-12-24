@@ -84,10 +84,14 @@ export async function GET(req: NextRequest) {
     if (error instanceof Error) {
       errorMessage = error.message;
     }
-    return new NextResponse(JSON.stringify(error), {
-      status: 500,
-      statusText: errorMessage,
-    });
+    return NextResponse.json(
+      {
+        error: errorMessage,
+      },
+      {
+        status: 500,
+      }
+    );
   }
 }
 
@@ -129,9 +133,13 @@ export async function PATCH(req: NextRequest) {
     if (error instanceof Error) {
       errorMessage = error.message;
     }
-    return new NextResponse(JSON.stringify(error), {
-      status: 500,
-      statusText: errorMessage,
-    });
+    return NextResponse.json(
+      {
+        error: errorMessage,
+      },
+      {
+        status: 500,
+      }
+    );
   }
 }

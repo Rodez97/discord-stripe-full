@@ -166,9 +166,9 @@ const handleCheckoutSessionComplete = async (
 
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
-    const tierRef = TierPaths.tier(tierId);
+    const tierSnapshot = await TierPaths.tier(tierId).get();
 
-    const tier = (await tierRef.get()).data();
+    const tier = tierSnapshot.data();
 
     if (!tier) {
       throw new Error("Tier not found.");
@@ -185,11 +185,7 @@ const handleCheckoutSessionComplete = async (
 
     const guildData = (await DiscordRest.get(Routes.guild(guildId))) as any;
 
-    // Store subscription details in Firestore
-    const subscriptionRef =
-      UserSubscriptions.userSubscriptionBySubId(subscriptionId);
-
-    await subscriptionRef.set({
+    await UserSubscriptions.userSubscriptionBySubId(subscriptionId).set({
       userId: customerDiscordId,
       subscriptionId,
       subscriptionStatus: subscription.status,
@@ -253,10 +249,10 @@ const handleChangedProduct = async (event: Stripe.Event) => {
       | string
       | undefined;
 
-    const subscriptionRef =
-      UserSubscriptions.userSubscriptionBySubId(subscriptionId);
+    const subscriptionSnapshot =
+      await UserSubscriptions.userSubscriptionBySubId(subscriptionId).get();
 
-    const subscriptionData = (await subscriptionRef.get()).data();
+    const subscriptionData = subscriptionSnapshot.data();
 
     if (!subscriptionData) {
       throw new Error("Subscription not found.");
@@ -266,9 +262,10 @@ const handleChangedProduct = async (event: Stripe.Event) => {
 
     // Compare products to determine if there's a change
     if (oldProductId && currentProductId && oldProductId !== currentProductId) {
-      const tierRef = TierPaths.tiersByProductId(currentProductId, sellerId);
-
-      const tierData = await tierRef.get();
+      const tierData = await TierPaths.tiersByProductId(
+        currentProductId,
+        sellerId
+      ).get();
 
       if (tierData.empty) {
         throw new Error("There is no tier with the new product ID.");
@@ -287,7 +284,9 @@ const handleChangedProduct = async (event: Stripe.Event) => {
         roles: newRoles,
       };
 
-      await subscriptionRef.set(subscriptionDocumentUpdate, { merge: true });
+      await subscriptionSnapshot.ref.set(subscriptionDocumentUpdate, {
+        merge: true,
+      });
 
       await DiscordRest.patch(Routes.guildMember(guildId, userId), {
         body: {

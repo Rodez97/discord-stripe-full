@@ -9,7 +9,11 @@ export async function POST(req: NextRequest) {
     const customerSnapshot = await CustomerPaths.customerByUserId(userId).get();
     const integrationSettings = customerSnapshot.data();
 
-    if (!integrationSettings) {
+    if (
+      !integrationSettings ||
+      !integrationSettings.stripeCustomerId ||
+      !integrationSettings.stripeSubscriptionId
+    ) {
       return NextResponse.json({ isSub: false }, { status: 200 });
     }
 
@@ -23,6 +27,13 @@ export async function POST(req: NextRequest) {
     if (error instanceof Error) {
       errorMessage = error.message;
     }
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: errorMessage,
+      },
+      {
+        status: 500,
+      }
+    );
   }
 }

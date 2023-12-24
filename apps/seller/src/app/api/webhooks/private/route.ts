@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
       "customer.subscription.updated",
       "customer.subscription.deleted",
       "checkout.session.completed",
+      "customer.deleted",
     ]);
 
     // Buffer the request data
@@ -81,13 +82,14 @@ const handleSubscriptionEvent = async (event: Stripe.Event) => {
   try {
     switch (type) {
       case "customer.subscription.updated":
-        await handleSubscriptionUpdate(event);
-        break;
       case "customer.subscription.deleted":
-        await handleDeleteSubscription(event);
+        await handleSubscriptionUpdate(event);
         break;
       case "checkout.session.completed":
         await handleCheckoutSessionComplete(event);
+        break;
+      case "customer.deleted":
+        await handleDeletedCustomer(event);
         break;
       default:
         console.warn(`Unhandled relevant event type: ${type}`);
@@ -135,9 +137,9 @@ const handleCheckoutSessionComplete = async (event: Stripe.Event) => {
       stripeSubscriptionItemId,
     };
 
-    const customerRef = CustomerPaths.customerByUserId(discordId);
-
-    await customerRef.set(customerData, { merge: true });
+    await CustomerPaths.customerByUserId(discordId).set(customerData, {
+      merge: true,
+    });
   } catch (error) {
     console.error("Error processing checkout session:", error);
     throw error;
@@ -148,17 +150,14 @@ const handleSubscriptionUpdate = async (event: Stripe.Event) => {
   try {
     // Extract relevant data from the incoming event
     const subscription = event.data.object as Stripe.Subscription;
-
-    if (subscription.status === "canceled") {
-      await handleDeleteSubscription(event);
-      return;
-    }
-
     const subscriptionId = subscription.id;
+    const stripeSubscriptionStatus = subscription.status;
+    const stripeSubscriptionPriceId = subscription.items.data[0].price.id;
+    const stripeSubscriptionItemId = subscription.items.data[0].id;
 
-    const customerRef = CustomerPaths.customerBySubscriptionId(subscriptionId);
-
-    const customerSnapshot = await customerRef.get();
+    const customerSnapshot = await CustomerPaths.customerBySubscriptionId(
+      subscriptionId
+    ).get();
 
     if (customerSnapshot.empty) {
       throw new Error("Customer not found.");
@@ -167,9 +166,9 @@ const handleSubscriptionUpdate = async (event: Stripe.Event) => {
     const customerDocument = customerSnapshot.docs[0];
 
     const partialCustomerData: Partial<Customer> = {
-      stripeSubscriptionStatus: subscription.status,
-      stripeSubscriptionPriceId: subscription.items.data[0].price.id,
-      stripeSubscriptionItemId: subscription.items.data[0].id,
+      stripeSubscriptionStatus,
+      stripeSubscriptionPriceId,
+      stripeSubscriptionItemId,
     };
 
     await customerDocument.ref.update(partialCustomerData);
@@ -179,15 +178,17 @@ const handleSubscriptionUpdate = async (event: Stripe.Event) => {
   }
 };
 
-const handleDeleteSubscription = async (event: Stripe.Event) => {
+const handleDeletedCustomer = async (event: Stripe.Event) => {
   try {
     // Extract relevant data from the incoming event
-    const subscription = event.data.object as Stripe.Subscription;
-    const subscriptionId = subscription.id;
+    const customer = event.data.object as
+      | Stripe.Customer
+      | Stripe.DeletedCustomer;
+    const customerId = customer.id;
 
-    const customerRef = CustomerPaths.customerBySubscriptionId(subscriptionId);
-
-    const customerSnapshot = await customerRef.get();
+    const customerSnapshot = await CustomerPaths.customerByCustomerId(
+      customerId
+    ).get();
 
     if (customerSnapshot.empty) {
       throw new Error("Customer not found.");
@@ -196,11 +197,11 @@ const handleDeleteSubscription = async (event: Stripe.Event) => {
     const customerDocument = customerSnapshot.docs[0];
 
     const partialCustomerData: Partial<Customer> = {
-      stripeSubscriptionId: "",
-      stripeSubscriptionStatus: "",
-      stripeSubscriptionPriceId: "",
-      stripeSubscriptionItemId: "",
       stripeCustomerId: "",
+      stripeSubscriptionId: "",
+      stripeSubscriptionItemId: "",
+      stripeSubscriptionPriceId: "",
+      stripeSubscriptionStatus: "",
     };
 
     await customerDocument.ref.update(partialCustomerData);

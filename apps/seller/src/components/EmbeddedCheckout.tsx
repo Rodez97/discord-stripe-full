@@ -15,7 +15,11 @@ const stripePromise = loadStripe(
 
 function EmbeddedCheckoutPage({ clientSecret }: { clientSecret: string }) {
   return (
-    <Main>
+    <Main
+      sx={{
+        backgroundColor: "#121212",
+      }}
+    >
       <CommonNavbar title="Subscribe" backHref="/" />
       <Box
         id="checkout"
