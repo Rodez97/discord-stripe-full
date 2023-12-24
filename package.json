@@ -50,6 +50,7 @@
     "@types/react-dom": "^18.2.14",
     "@types/stripe-v3": "^3.1.32",
     "dotenv-cli": "^7.3.0",
+    "firebase-tools-with-isolate": "^13.0.2",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "next-transpile-modules": "^10.0.1",
