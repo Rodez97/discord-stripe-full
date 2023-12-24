@@ -2,8 +2,7 @@
 import { Box, IconButton, Toolbar, Typography } from "@mui/material";
 import Link from "next/link";
 import React from "react";
-import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
 function CommonNavbar({
   title,
@@ -33,7 +32,7 @@ function CommonNavbar({
             LinkComponent={Link}
             href={backHref}
           >
-            <FontAwesomeIcon icon={faArrowLeft} />
+            <ArrowBackIcon />
           </IconButton>
         )}
         <Typography

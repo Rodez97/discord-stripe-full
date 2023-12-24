@@ -1,9 +1,9 @@
 "use client";
-import { faArrowLeft, faRedo } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Box, Button, Typography } from "@mui/material";
 import { useRouter } from "next/navigation";
 import React, { useEffect } from "react";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import RestartAltIcon from "@mui/icons-material/RestartAlt";
 
 function ErrorPage({
   error,
@@ -61,7 +61,7 @@ function ErrorPage({
           }}
           onClick={() => reset()}
           color="error"
-          startIcon={<FontAwesomeIcon icon={faRedo} />}
+          startIcon={<RestartAltIcon />}
         >
           Try again
         </Button>
@@ -73,7 +73,7 @@ function ErrorPage({
           marginTop: "1rem", // You can adjust the spacing value as needed
         }}
         onClick={() => router.back()}
-        startIcon={<FontAwesomeIcon icon={faArrowLeft} />}
+        startIcon={<ArrowBackIcon />}
       >
         Go back
       </Button>

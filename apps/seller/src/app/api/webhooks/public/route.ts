@@ -3,14 +3,12 @@ import Stripe from "stripe";
 import { checkStripeData } from "../../../../lib/stripe-utils";
 import { TierPaths, UserSubscriptions } from "@stripe-discord/db-lib";
 import { REST } from "@discordjs/rest";
-import { API, Routes } from "@discordjs/core";
 import { UserSubscription } from "@stripe-discord/types";
+import { Routes } from "discord-api-types/v10";
 
 const DiscordRest = new REST({ version: "10" }).setToken(
   process.env.DISCORD_BOT_TOKEN
 );
-
-const DiscordAPI = new API(DiscordRest);
 
 export async function POST(req: NextRequest) {
   try {
@@ -185,7 +183,7 @@ const handleCheckoutSessionComplete = async (
       },
     });
 
-    const guildData = await DiscordAPI.guilds.get(guildId);
+    const guildData = (await DiscordRest.get(Routes.guild(guildId))) as any;
 
     // Store subscription details in Firestore
     const subscriptionRef =
