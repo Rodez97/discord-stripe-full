@@ -1,5 +1,7 @@
 import type { NextAuthConfig } from "next-auth";
 import DiscordProvider from "next-auth/providers/discord";
+import { signOut } from "./auth";
+import { JWT } from "@auth/core/jwt";
 
 export const authConfig = {
   providers: [
@@ -68,23 +70,25 @@ export const authConfig = {
         },
       };
     },
-    async jwt({ token, account, user }) {
-      if (account && user) {
+    async jwt({ token, account }) {
+      if (account) {
         token.accessToken = account.access_token;
-        token.accessTokenExpires = Date.now() + account.expires_in! * 1000;
+        token.accessTokenExpires = Date.now() + account.expires_in * 1000;
         token.refreshToken = account.refresh_token;
-        token.user = user;
       }
 
+      const subscriptionValidityExpires = token.subscriptionValidityExpires;
+      const accessTokenExpires = token.accessTokenExpires;
+
       if (
-        !token.subscriptionValidityExpires ||
-        Date.now() < (token as any).subscriptionValidityExpires
+        !subscriptionValidityExpires ||
+        Date.now() < subscriptionValidityExpires
       ) {
-        await refreshSubscriptionStatus(token);
+        token = await refreshSubscriptionStatus(token);
       }
 
       // Return previous token if the access token has not expired yet
-      if (Date.now() < (token as any).accessTokenExpires) {
+      if (accessTokenExpires && Date.now() < accessTokenExpires) {
         return token;
       }
 
@@ -94,8 +98,18 @@ export const authConfig = {
   },
 } satisfies NextAuthConfig;
 
-async function refreshAccessToken(token: any) {
+async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
+    if (!token.refreshToken) {
+      // If there is no refresh token, sign out user and redirect to login page
+      await signOut();
+
+      return {
+        ...token,
+        error: "RefreshAccessTokenError",
+      };
+    }
+
     const url = "https://discord.com/api/v10/oauth2/token";
 
     const response = await fetch(url, {
@@ -133,7 +147,7 @@ async function refreshAccessToken(token: any) {
   }
 }
 
-async function refreshSubscriptionStatus(token: any) {
+async function refreshSubscriptionStatus(token: JWT): Promise<JWT> {
   try {
     const response = await fetch(
       `${process.env.NEXTAUTH_URL}/api/verify-subscription`,
@@ -142,7 +156,7 @@ async function refreshSubscriptionStatus(token: any) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ userId: token.sub! }),
+        body: JSON.stringify({ userId: token.sub }),
       }
     );
 
@@ -152,12 +166,16 @@ async function refreshSubscriptionStatus(token: any) {
       throw data;
     }
 
-    token.subscription = data.isSub;
-    token.subscriptionValidityExpires = Date.now() + 1000 * 60 * 60 * 24; // 24 hours
+    return {
+      ...token,
+      subscription: data.isSub,
+      subscriptionValidityExpires: Date.now() + 1000 * 60 * 60 * 24, // 24 hours
+    };
   } catch (error) {
     console.log(error);
 
     return {
+      ...token,
       error: "RefreshAccessTokenError",
     };
   }

@@ -1,8 +1,6 @@
 "use client";
 import React, { useState } from "react";
 import { FormikHelpers, useFormik } from "formik";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import { useRouter } from "next/navigation";
 import {
   Alert,
@@ -23,6 +21,7 @@ import Main from "@stripe-discord/ui/components/Main";
 import CommonNavbar from "@stripe-discord/ui/components/CommonNavbar";
 import Form from "@stripe-discord/ui/components/Form";
 import LoadingBackdrop from "@stripe-discord/ui/components/LoadingBackdrop";
+import SmartToyIcon from "@mui/icons-material/SmartToy";
 
 type FormType = {
   id: string;
@@ -156,7 +155,7 @@ function AddServerForm({ availableServers }: { availableServers: any[] }) {
                   href={createDiscordUrl()}
                   target="_blank"
                   rel="noreferrer"
-                  startIcon={<FontAwesomeIcon icon={faDiscord} />}
+                  startIcon={<SmartToyIcon />}
                   fullWidth
                   variant="contained"
                 >

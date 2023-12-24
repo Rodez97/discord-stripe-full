@@ -1,6 +1,5 @@
 "use client";
 import React from "react";
-import { Box, Typography } from "@mui/material";
 import useSWR, { Fetcher } from "swr";
 import SubscriberServerCard from "../../../components/SubscriberServerCard";
 import { UserSubscription } from "@stripe-discord/types";
@@ -8,6 +7,9 @@ import { mainFetcher } from "@stripe-discord/lib";
 import LoadingPage from "@stripe-discord/ui/components/LoadingPage";
 import ErrorPage from "../../error";
 import CommonNavbar from "@stripe-discord/ui/components/CommonNavbar";
+import Main from "@stripe-discord/ui/components/Main";
+import Empty from "@stripe-discord/ui/components/Empty";
+import CardsContainer from "@stripe-discord/ui/components/CardsContainer";
 
 const fetcher: Fetcher<
   {
@@ -17,7 +19,7 @@ const fetcher: Fetcher<
 > = (apiUrl) => mainFetcher(apiUrl);
 
 function MonetizedServersPage() {
-  const { data, error, isLoading } = useSWR("/subscribed", fetcher);
+  const { data, error, isLoading } = useSWR("/api/subscribed", fetcher);
 
   if (isLoading) {
     return <LoadingPage />;
@@ -34,43 +36,19 @@ function MonetizedServersPage() {
   const { guilds } = data;
 
   return (
-    <Box
-      sx={{
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
+    <Main>
       <CommonNavbar title={`Subscribed servers (${guilds.length})`} />
 
-      {guilds.length === 0 && (
-        <Typography
-          variant="body1"
-          sx={{
-            color: "gray",
-            textAlign: "center",
-          }}
-        >
-          You are not subscribed to any servers.
-        </Typography>
+      {guilds.length === 0 ? (
+        <Empty variant="body1">You are not subscribed to any servers...</Empty>
+      ) : (
+        <CardsContainer>
+          {guilds.map((guild) => (
+            <SubscriberServerCard key={guild.subscriptionId} guild={guild} />
+          ))}
+        </CardsContainer>
       )}
-
-      <Box
-        sx={{
-          height: "100%",
-          gap: "1rem",
-          flexWrap: "wrap",
-          marginTop: "1rem",
-          display: "flex",
-          padding: "1rem",
-          alignContent: "flex-start",
-        }}
-      >
-        {guilds.map((guild) => (
-          <SubscriberServerCard key={guild.subscriptionId} guild={guild} />
-        ))}
-      </Box>
-    </Box>
+    </Main>
   );
 }
 

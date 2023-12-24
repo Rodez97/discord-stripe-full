@@ -1,7 +1,5 @@
 "use client";
 import React from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faStripeS } from "@fortawesome/free-brands-svg-icons";
 import Link from "next/link";
 import { Button } from "@mui/material";
 import TierCard from "../../components/TierCard";
@@ -14,6 +12,7 @@ import CommonNavbar from "@stripe-discord/ui/components/CommonNavbar";
 import Empty from "@stripe-discord/ui/components/Empty";
 import CardsContainer from "@stripe-discord/ui/components/CardsContainer";
 import { DiscordTier, DiscordTierWithPrices } from "@stripe-discord/types";
+import AddCircleIcon from "@mui/icons-material/AddCircle";
 
 const fetcher: Fetcher<
   {
@@ -49,7 +48,7 @@ function TiersPage({ params: { serverId } }: { params: { serverId: string } }) {
           LinkComponent={Link}
           href={`/${serverId}/new-tier`}
           variant="outlined"
-          startIcon={<FontAwesomeIcon icon={faStripeS} />}
+          startIcon={<AddCircleIcon />}
           sx={{ width: 220 }}
         >
           Add a new tier

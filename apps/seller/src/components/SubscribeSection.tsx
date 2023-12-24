@@ -1,11 +1,10 @@
 "use client";
 import { Box, Button, Typography } from "@mui/material";
 import React from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCrown } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import Image from "next/image";
 import logoImg from "../../public/Logo/LogoWS.png";
+import StarIcon from "@mui/icons-material/Star";
 
 export default function SubscribeSection() {
   return (
@@ -34,7 +33,7 @@ export default function SubscribeSection() {
         LinkComponent={Link}
         href="/subscribe"
         variant="contained"
-        startIcon={<FontAwesomeIcon icon={faCrown} />}
+        startIcon={<StarIcon />}
         size="large"
       >
         Get Started

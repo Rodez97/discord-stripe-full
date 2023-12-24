@@ -5,29 +5,23 @@ import ErrorPage from "../../error";
 import {
   Alert,
   Box,
-  Button,
-  Card,
-  CardActions,
-  CardContent,
-  CardHeader,
   Collapse,
   Container,
-  CssBaseline,
-  GlobalStyles,
-  Grid,
   IconButton,
   Stack,
   Switch,
   Typography,
 } from "@mui/material";
 import Image from "next/image";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faClose } from "@fortawesome/free-solid-svg-icons";
 import { useRouter } from "next/navigation";
 import { DiscordTierWithPrices, MonetizedServer } from "@stripe-discord/types";
-import { mainFetcher } from "@stripe-discord/lib";
+import { mainFetcher, controlledFetch } from "@stripe-discord/lib";
 import LoadingPage from "@stripe-discord/ui/components/LoadingPage";
 import LoadingBackdrop from "@stripe-discord/ui/components/LoadingBackdrop";
+import CloseIcon from "@mui/icons-material/Close";
+import PricingCard from "../../../components/PricingCard";
+import Main from "@stripe-discord/ui/components/Main";
+import pricingStyle from "../../../styles/pricing.module.scss";
 
 const getCheckoutSessionUrl = (
   guildId: string,
@@ -35,12 +29,6 @@ const getCheckoutSessionUrl = (
   priceId: string
 ) =>
   `/api/checkout-session?guildId=${guildId}&tierId=${tierId}&priceId=${priceId}`;
-
-const convertPrice = (price: number, currency: string) =>
-  Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-  }).format(price);
 
 const fetcher: Fetcher<
   {
@@ -65,14 +53,9 @@ function TiersPage({ params: { guildId } }: { params: { guildId: string } }) {
 
     try {
       setLoading(true);
-      const res = await fetch(checkoutSessionUrl);
-      if (!res.ok) {
-        throw new Error(res.statusText);
-      }
+      const res = await controlledFetch(checkoutSessionUrl);
+
       const { url } = await res.json();
-      if (!url) {
-        throw new Error("There was an error");
-      }
       router.push(url);
     } catch (error) {
       console.error(error);
@@ -140,54 +123,55 @@ function TiersPage({ params: { guildId } }: { params: { guildId: string } }) {
   const { guild } = data;
 
   return (
-    <Box>
-      <GlobalStyles
-        styles={{ ul: { margin: 0, padding: 0, listStyle: "none" } }}
-      />
-      <CssBaseline />
-
-      <Container
-        disableGutters
-        maxWidth="sm"
-        component="main"
-        sx={{ pt: 8, pb: 6 }}
-      >
-        {guild.icon && (
-          <Image
-            src={`https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png`}
-            alt={guild.name}
-            width={64}
-            height={64}
-            layout="fixed"
-            style={{
-              margin: "0 auto",
-              display: "block",
-              marginBottom: "1rem",
-            }}
-          />
-        )}
-        <Typography
-          component="h1"
-          variant="h2"
-          align="center"
-          color="text.primary"
-          gutterBottom
+    <Main>
+      <Container disableGutters maxWidth="sm" sx={{ pt: 8, pb: 6 }}>
+        <Box
+          sx={{
+            mb: 2,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "1rem",
+          }}
         >
-          {guild.name}
-        </Typography>
+          {guild.icon && (
+            <Image
+              src={
+                guild.icon
+                  ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png`
+                  : "/images/discord-logo.png"
+              }
+              alt={guild.name}
+              width={50}
+              height={50}
+              layout="fixed"
+            />
+          )}
+
+          <Typography variant="h4" align="center">
+            {guild.name}
+          </Typography>
+        </Box>
+
         <Typography
           variant="h5"
           align="center"
           color="text.secondary"
           component="p"
         >
-          Choose a plan that suits your needs and begin to experience the
-          advantages of being a supporter of <b>{guild.name}</b>.
+          Choose a plan that suits your needs
         </Typography>
       </Container>
 
-      {/* End hero unit */}
-      <Container maxWidth="md" component="main">
+      <Box
+        sx={{
+          maxWidth: 1000,
+          margin: "auto",
+          width: "100%",
+          height: "100%",
+          overflow: "hidden",
+        }}
+      >
         {haveYearlyPlan && (
           <Stack
             direction="row"
@@ -206,101 +190,21 @@ function TiersPage({ params: { guildId } }: { params: { guildId: string } }) {
           </Stack>
         )}
 
-        <Grid container spacing={5} alignItems="flex-end">
+        <div className={pricingStyle.planItem__container}>
           {getPlans.map((tier) => {
             return (
               // Enterprise card is full width at sm breakpoint
-              <Grid
-                item
-                key={tier.nickname}
-                xs={12}
-                sm={getPlans.length === 1 ? 12 : 6}
-                md={
-                  getPlans.length === 1
-                    ? 12
-                    : getPlans.length === 2
-                    ? 6
-                    : getPlans.length === 3
-                    ? 4
-                    : 3
-                }
-              >
-                <Card
-                  sx={{
-                    boxShadow: 2,
-                    transition: "box-shadow 0.3s ease-in-out",
-                    "&:hover": {
-                      boxShadow: 4,
-                    },
-                    maxWidth: 345,
-                    margin: "0 auto",
-                  }}
-                >
-                  <CardHeader
-                    title={tier.nickname}
-                    titleTypographyProps={{ align: "center" }}
-                    subheaderTypographyProps={{
-                      align: "center",
-                    }}
-                    sx={{
-                      backgroundColor: (theme) =>
-                        theme.palette.mode === "light"
-                          ? theme.palette.grey[200]
-                          : theme.palette.grey[700],
-                    }}
-                  />
-                  <CardContent>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "baseline",
-                        mb: 2,
-                      }}
-                    >
-                      <Typography
-                        component="h2"
-                        variant="h3"
-                        color="text.primary"
-                      >
-                        {convertPrice(
-                          yearly && tier.yearlyPriceQty
-                            ? tier.yearlyPriceQty
-                            : tier.monthlyPriceQty,
-                          tier.currency
-                        )}
-                      </Typography>
-                      <Typography variant="h6" color="text.secondary">
-                        /{yearly ? "yr" : "mo"}
-                      </Typography>
-                    </Box>
-
-                    {tier.description && (
-                      <Typography variant="subtitle1" align="center">
-                        {tier.description}
-                      </Typography>
-                    )}
-                  </CardContent>
-                  <CardActions>
-                    <Button
-                      fullWidth
-                      variant={"contained"}
-                      onClick={openCheckoutSession(
-                        tier.id,
-                        yearly && tier.yearlyPriceId
-                          ? tier.yearlyPriceId
-                          : tier.monthlyPriceId
-                      )}
-                    >
-                      Get started
-                    </Button>
-                  </CardActions>
-                </Card>
-              </Grid>
+              <PricingCard
+                key={tier.id}
+                tier={tier}
+                numberOfTiers={getPlans.length}
+                yearly={yearly}
+                openCheckoutSession={openCheckoutSession}
+              />
             );
           })}
-        </Grid>
-      </Container>
+        </div>
+      </Box>
 
       <Collapse
         in={Boolean(errorMessage)}
@@ -321,7 +225,7 @@ function TiersPage({ params: { guildId } }: { params: { guildId: string } }) {
                 setErrorMessage("");
               }}
             >
-              <FontAwesomeIcon icon={faClose} />
+              <CloseIcon fontSize="inherit" />
             </IconButton>
           }
           sx={{ mb: 2 }}
@@ -331,7 +235,7 @@ function TiersPage({ params: { guildId } }: { params: { guildId: string } }) {
       </Collapse>
 
       <LoadingBackdrop open={loading} />
-    </Box>
+    </Main>
   );
 }
 

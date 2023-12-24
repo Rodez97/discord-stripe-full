@@ -10,13 +10,16 @@ export async function GET(req: NextRequest) {
     const guildId = searchParams.get("guildId");
 
     if (!guildId || typeof guildId !== "string") {
-      throw new Error("No server id");
+      return NextResponse.json({ error: "No server id" }, { status: 400 });
     }
 
     const session = await auth();
 
     if (!session) {
-      throw new Error("The user is not authenticated.");
+      return NextResponse.json(
+        { error: "The user is not authenticated." },
+        { status: 401 }
+      );
     }
 
     const { id } = session.user;
@@ -29,7 +32,7 @@ export async function GET(req: NextRequest) {
     const userSubscriptionSnapshot = await userSubscriptionRef.get();
 
     if (userSubscriptionSnapshot.empty) {
-      throw new Error("We couldn't find your server");
+      return NextResponse.json({ error: "No subscription" }, { status: 400 });
     }
 
     const userSubscription = userSubscriptionSnapshot.docs[0].data();
@@ -52,18 +55,16 @@ export async function GET(req: NextRequest) {
     });
 
     // Return the URL for client-side redirection
-    return NextResponse.json({
-      url: billingSession.url,
-    });
+    return NextResponse.json(
+      {
+        url: billingSession.url,
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error:", error);
-    let errorMessage = "Unknown error";
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
     return new NextResponse(JSON.stringify(error), {
       status: 500,
-      statusText: errorMessage,
     });
   }
 }

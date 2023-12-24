@@ -1,12 +1,7 @@
 "use client";
 import {
-  faEllipsisVertical,
-  faMoneyBill,
-} from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
   CardActions,
-  CardContent,
+  CardHeader,
   CardMedia,
   Chip,
   IconButton,
@@ -14,14 +9,16 @@ import {
   ListItemText,
   Menu,
   MenuItem,
-  Typography,
 } from "@mui/material";
 import React, { useState } from "react";
-import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import { useRouter } from "next/navigation";
 import MainCard from "@stripe-discord/ui/components/MainCard";
 import { UserSubscription } from "@stripe-discord/types";
 import LoadingBackdrop from "@stripe-discord/ui/components/LoadingBackdrop";
+import HailIcon from "@mui/icons-material/Hail";
+import CreditCardIcon from "@mui/icons-material/CreditCard";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import { controlledFetch } from "@stripe-discord/lib";
 
 interface SubscriberServerCardProps {
   guild: UserSubscription;
@@ -45,7 +42,7 @@ const SubscriberServerCard: React.FC<SubscriberServerCardProps> = ({
   const joinDiscordServer = async () => {
     try {
       setLoading(true);
-      await fetch(`/subscribed/api`, {
+      await controlledFetch(`/api/subscribed`, {
         method: "POST",
         body: JSON.stringify({ guildId: guild.guildId }),
       });
@@ -61,13 +58,9 @@ const SubscriberServerCard: React.FC<SubscriberServerCardProps> = ({
   const manageSubscription = async () => {
     try {
       setLoading(true);
-      const res = await fetch(
+      const res = await controlledFetch(
         `/api/customer-billing-portal?guildId=${guild.guildId}`
       );
-
-      if (!res.ok) {
-        throw new Error(res.statusText);
-      }
 
       const { url } = await res.json();
       router.push(url);
@@ -81,66 +74,57 @@ const SubscriberServerCard: React.FC<SubscriberServerCardProps> = ({
 
   return (
     <>
-      <MainCard
-        sx={{
-          width: 220,
-          paddingTop: "1rem",
-        }}
-        variant="outlined"
-      >
-        <CardMedia
-          sx={{ height: 100, backgroundSize: "contain" }}
-          image={`https://cdn.discordapp.com/icons/${guild.guildId}/${guild.guildIcon}.png`}
+      <MainCard variant="outlined">
+        <CardHeader
+          action={
+            <IconButton
+              onClick={handleMenuOpen}
+              aria-label="settings"
+              aria-controls="settings-menu"
+              aria-haspopup="true"
+              aria-expanded={Boolean(anchorEl)}
+              sx={{ ml: "auto" }}
+            >
+              <MoreVertIcon />
+            </IconButton>
+          }
           title={guild.guildName}
         />
-        <CardContent>
-          <Typography
-            gutterBottom
-            variant="h6"
-            component="div"
-            textAlign="center"
-          >
-            {guild.guildName}
-          </Typography>
-        </CardContent>
-        <CardActions disableSpacing>
+        <CardMedia
+          sx={{ height: 100, backgroundSize: "contain" }}
+          image={
+            guild.guildIcon
+              ? `https://cdn.discordapp.com/icons/${guild.guildId}/${guild.guildIcon}.png`
+              : "/images/discord-logo.png"
+          }
+          title={guild.guildName}
+        />
+        <CardActions>
           <Chip label={guild.subscriptionStatus} color="primary" />
-
-          <IconButton
-            onClick={handleMenuOpen}
-            aria-label="settings"
-            aria-controls="settings-menu"
-            aria-haspopup="true"
-            aria-expanded={Boolean(anchorEl)}
-            sx={{ ml: "auto" }}
-          >
-            <FontAwesomeIcon icon={faEllipsisVertical} />
-          </IconButton>
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={handleMenuClose}
-          >
-            <MenuItem
-              onClick={joinDiscordServer}
-              disabled={["active", "trialing"].includes(
-                guild.subscriptionStatus
-              )}
-            >
-              <ListItemIcon>
-                <FontAwesomeIcon icon={faDiscord} />
-              </ListItemIcon>
-              <ListItemText>Join Discord Server</ListItemText>
-            </MenuItem>
-            <MenuItem onClick={manageSubscription}>
-              <ListItemIcon>
-                <FontAwesomeIcon icon={faMoneyBill} />
-              </ListItemIcon>
-              <ListItemText>Manage Subscription</ListItemText>
-            </MenuItem>
-          </Menu>
         </CardActions>
       </MainCard>
+
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+      >
+        <MenuItem
+          onClick={joinDiscordServer}
+          disabled={["active", "trialing"].includes(guild.subscriptionStatus)}
+        >
+          <ListItemIcon>
+            <HailIcon />
+          </ListItemIcon>
+          <ListItemText>Join Discord Server</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={manageSubscription}>
+          <ListItemIcon>
+            <CreditCardIcon />
+          </ListItemIcon>
+          <ListItemText>Manage Subscription</ListItemText>
+        </MenuItem>
+      </Menu>
 
       <LoadingBackdrop open={loading} />
     </>

@@ -1,0 +1,13 @@
+{
+  "/(auth)/login/page": "app/(auth)/login/page.js",
+  "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
+  "/api/verify-subscription/route": "app/api/verify-subscription/route.js",
+  "/api/monetized-servers/route": "app/api/monetized-servers/route.js",
+  "/api/guild/route": "app/api/guild/route.js",
+  "/(home)/settings/api/route": "app/(home)/settings/api/route.js",
+  "/(home)/add-server/page": "app/(home)/add-server/page.js",
+  "/(home)/settings/page": "app/(home)/settings/page.js",
+  "/(home)/add-server/api/route": "app/(home)/add-server/api/route.js",
+  "/(home)/page": "app/(home)/page.js",
+  "/[serverId]/page": "app/[serverId]/page.js"
+}

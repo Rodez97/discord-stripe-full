@@ -10,8 +10,8 @@ import {
   InputAdornment,
   TextField,
 } from "@mui/material";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faClose, faPlus } from "@fortawesome/free-solid-svg-icons";
+import AddIcon from "@mui/icons-material/Add";
+import CloseIcon from "@mui/icons-material/Close";
 
 interface BenefitsControlProps {
   benefits?: string[];
@@ -70,7 +70,7 @@ function BenefitsControl({
                 onClick={addBenefit}
                 edge="end"
               >
-                <FontAwesomeIcon icon={faPlus} />
+                <AddIcon />
               </IconButton>
             </InputAdornment>
           ),
@@ -94,7 +94,7 @@ function BenefitsControl({
                     checked
                     onChange={() => removeBenefit(benefit)}
                     name={benefit}
-                    checkedIcon={<FontAwesomeIcon icon={faClose} />}
+                    checkedIcon={<CloseIcon />}
                   />
                 }
                 label={benefit}

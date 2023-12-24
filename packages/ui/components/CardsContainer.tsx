@@ -10,6 +10,7 @@ const CardsContainer = styled(Box)`
   padding: 1rem;
   align-content: flex-start;
   justify-content: center;
+  overflow-y: auto;
 
   @media (max-width: 600px) {
     padding: 0.5rem;

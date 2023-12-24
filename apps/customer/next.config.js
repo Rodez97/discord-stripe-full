@@ -1,3 +1,4 @@
+const path = require("path");
 const withTM = require("next-transpile-modules")([
   "@stripe-discord/lib",
   "@stripe-discord/ui",
@@ -17,6 +18,9 @@ const nextConfig = {
         port: "",
       },
     ],
+  },
+  sassOptions: {
+    includePaths: [path.join(__dirname, "src", "styles")],
   },
 };
 

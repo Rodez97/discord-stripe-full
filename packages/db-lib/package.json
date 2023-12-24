@@ -5,7 +5,9 @@
   "types": "index.ts",
   "devDependencies": {
     "@stripe-discord/lib": "*",
-    "@stripe-discord/types": "*",
-    "firebase-admin": "^12.0.0"
+    "@stripe-discord/types": "*"
+  },
+  "peerDependencies": {
+    "firebase-admin": ">=12.0.0"
   }
 }

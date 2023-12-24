@@ -118,6 +118,11 @@ export const MonetizedServers = {
       .where("ownerId", "==", userId)
       .where(firestore.FieldPath.documentId(), "==", serverId)
       .withConverter(AdminMonetizedServersFirestoreConverter),
+  monetizedServerById: (serverId: string) =>
+    firestore()
+      .collection("monetizedServers")
+      .doc(serverId)
+      .withConverter(AdminMonetizedServersFirestoreConverter),
 };
 
 export const UserSubscriptions = {

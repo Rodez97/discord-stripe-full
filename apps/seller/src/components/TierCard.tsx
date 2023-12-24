@@ -1,13 +1,6 @@
 "use client";
 import {
-  faEllipsisVertical,
-  faPencil,
-  faTrashCan,
-} from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
   Button,
-  Card,
   CardContent,
   CardHeader,
   Dialog,
@@ -28,6 +21,9 @@ import { KeyedMutator } from "swr";
 import LoadingBackdrop from "@stripe-discord/ui/components/LoadingBackdrop";
 import { DiscordTier, DiscordTierWithPrices } from "@stripe-discord/types";
 import MainCard from "@stripe-discord/ui/components/MainCard";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 interface TierCardProps {
   tier: DiscordTierWithPrices;
@@ -98,7 +94,7 @@ const TierCard: React.FC<TierCardProps> = ({ tier, serverId, mutate }) => {
               aria-expanded={Boolean(anchorEl)}
               sx={{ ml: "auto" }}
             >
-              <FontAwesomeIcon icon={faEllipsisVertical} />
+              <MoreVertIcon />
             </IconButton>
           }
         />
@@ -143,13 +139,13 @@ const TierCard: React.FC<TierCardProps> = ({ tier, serverId, mutate }) => {
       >
         <MenuItem onClick={handleEditTier}>
           <ListItemIcon>
-            <FontAwesomeIcon icon={faPencil} />
+            <EditIcon />
           </ListItemIcon>
           <ListItemText>Edit Tier</ListItemText>
         </MenuItem>
         <MenuItem onClick={handleDelete}>
           <ListItemIcon>
-            <FontAwesomeIcon icon={faTrashCan} color="red" />
+            <DeleteIcon color="error" />
           </ListItemIcon>
           <ListItemText sx={{ color: "red" }}>Remove</ListItemText>
         </MenuItem>

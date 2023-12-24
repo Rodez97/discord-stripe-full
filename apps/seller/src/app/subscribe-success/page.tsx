@@ -6,6 +6,9 @@ import ErrorPage from "../error";
 import { useSearchParams } from "next/navigation";
 import LoadingPage from "@stripe-discord/ui/components/LoadingPage";
 import { mainFetcher } from "@stripe-discord/lib";
+import Main from "@stripe-discord/ui/components/Main";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import ErrorIcon from "@mui/icons-material/Error";
 
 const fetcher: Fetcher<
   {
@@ -37,9 +40,8 @@ function MonetizedServersPage() {
 
   const { status } = data;
 
-  if (status === "complete") {
-    // Create a success page
-    return (
+  return (
+    <Main>
       <Box
         sx={{
           display: "flex",
@@ -47,40 +49,21 @@ function MonetizedServersPage() {
           alignItems: "center",
           justifyContent: "center",
           minHeight: "100vh",
+          gap: 2,
         }}
       >
-        <Typography variant="h1">Success!</Typography>
-        <Typography variant="body1">
-          You have successfully subscribed to the Discord and Stripe Integration
-          Bot!
+        {status === "complete" ? (
+          <CheckCircleIcon sx={{ fontSize: 100 }} color="success" />
+        ) : (
+          <ErrorIcon sx={{ fontSize: 100 }} color="error" />
+        )}
+        <Typography variant="h2">
+          {status === "complete" ? "Success!" : "Cancelled!"}
         </Typography>
-
-        <Button
-          variant="contained"
-          color="primary"
-          href="/"
-          sx={{
-            mt: 2,
-          }}
-        >
-          Monetize your servers now!
-        </Button>
-      </Box>
-    );
-  } else {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "100vh",
-        }}
-      >
-        <Typography variant="h1">Cancelled!</Typography>
         <Typography variant="body1">
-          Ypu have cancelled the subscription process.
+          {status === "complete"
+            ? "You have successfully subscribed to the Discord and Stripe Integration!"
+            : "You have cancelled the subscription process."}
         </Typography>
 
         <Button
@@ -94,8 +77,8 @@ function MonetizedServersPage() {
           Go back to the home page
         </Button>
       </Box>
-    );
-  }
+    </Main>
+  );
 }
 
 export default MonetizedServersPage;

@@ -1,7 +1,5 @@
 "use client";
 import React from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDiscord, faStripeS } from "@fortawesome/free-brands-svg-icons";
 import Link from "next/link";
 import { Button } from "@mui/material";
 import ServerCard from "../../components/ServerCard";
@@ -14,6 +12,8 @@ import CommonNavbar from "@stripe-discord/ui/components/CommonNavbar";
 import Empty from "@stripe-discord/ui/components/Empty";
 import CardsContainer from "@stripe-discord/ui/components/CardsContainer";
 import { MonetizedServer } from "@stripe-discord/types";
+import SettingsIcon from "@mui/icons-material/Settings";
+import AddCircleIcon from "@mui/icons-material/AddCircle";
 
 const fetcher: Fetcher<
   {
@@ -48,7 +48,7 @@ function MonetizedServersPage() {
         <Button
           LinkComponent={Link}
           href="/settings"
-          startIcon={<FontAwesomeIcon icon={faStripeS} />}
+          startIcon={<SettingsIcon />}
           variant="outlined"
           sx={{ width: 220 }}
         >
@@ -57,7 +57,7 @@ function MonetizedServersPage() {
         <Button
           LinkComponent={Link}
           href="/add-server"
-          startIcon={<FontAwesomeIcon icon={faDiscord} />}
+          startIcon={<AddCircleIcon />}
           variant="outlined"
           sx={{ width: 220 }}
           disabled={guilds.length >= 10}

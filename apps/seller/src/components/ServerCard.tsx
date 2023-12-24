@@ -1,12 +1,6 @@
 "use client";
 import {
-  faEllipsisVertical,
-  faTrashCan,
-} from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
   Button,
-  Card,
   CardActionArea,
   CardHeader,
   CardMedia,
@@ -22,13 +16,15 @@ import {
   MenuItem,
 } from "@mui/material";
 import React, { useState } from "react";
-import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import { KeyedMutator } from "swr";
 import { useRouter } from "next/navigation";
 import LoadingBackdrop from "@stripe-discord/ui/components/LoadingBackdrop";
 import { controlledFetch } from "@stripe-discord/lib";
 import { MonetizedServer } from "@stripe-discord/types";
 import MainCard from "@stripe-discord/ui/components/MainCard";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import SmartToyIcon from "@mui/icons-material/SmartToy";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 interface ServerCardProps {
   guild: MonetizedServer;
@@ -104,7 +100,7 @@ const ServerCard: React.FC<ServerCardProps> = ({ guild, mutate }) => {
                 aria-expanded={Boolean(anchorEl)}
                 sx={{ ml: "auto" }}
               >
-                <FontAwesomeIcon icon={faEllipsisVertical} />
+                <MoreVertIcon />
               </IconButton>
             }
             title={guild.name}
@@ -129,13 +125,13 @@ const ServerCard: React.FC<ServerCardProps> = ({ guild, mutate }) => {
       >
         <MenuItem onClick={handleConnectBot}>
           <ListItemIcon>
-            <FontAwesomeIcon icon={faDiscord} />
+            <SmartToyIcon />
           </ListItemIcon>
           <ListItemText>Connect Bot</ListItemText>
         </MenuItem>
         <MenuItem onClick={handleDeleteServer}>
           <ListItemIcon color="red">
-            <FontAwesomeIcon icon={faTrashCan} color="red" />
+            <DeleteIcon />
           </ListItemIcon>
           <ListItemText sx={{ color: "red" }}>Remove</ListItemText>
         </MenuItem>

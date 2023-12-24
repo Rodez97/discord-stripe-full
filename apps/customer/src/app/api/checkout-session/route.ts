@@ -19,21 +19,24 @@ export async function GET(req: Request) {
     const priceId = searchParams.get("priceId");
 
     if (!guildId || typeof guildId !== "string") {
-      throw new Error("No server id");
+      return NextResponse.json({ error: "No server id" }, { status: 400 });
     }
 
     if (!tierId || typeof tierId !== "string") {
-      throw new Error("No tier id");
+      return NextResponse.json({ error: "No tier id" }, { status: 400 });
     }
 
     if (!priceId || typeof priceId !== "string") {
-      throw new Error("No price id");
+      return NextResponse.json({ error: "No price id" }, { status: 400 });
     }
 
     const session = await auth();
 
     if (!session) {
-      throw new Error("The user is not authenticated.");
+      return NextResponse.json(
+        { error: "The user is not authenticated." },
+        { status: 401 }
+      );
     }
 
     const { owner_id } = (await discordRest.get(Routes.guild(guildId))) as {
@@ -45,17 +48,23 @@ export async function GET(req: Request) {
     const tier = tierData.data();
 
     if (!tier) {
-      throw new Error("Tier not found");
+      return NextResponse.json({ error: "Tier not found" }, { status: 404 });
     }
 
     const { id, accessToken, name, email } = session.user;
 
     if (owner_id === id) {
-      throw new Error("You can't subscribe to your own server");
+      return NextResponse.json(
+        { error: "You can't subscribe to your own server" },
+        { status: 400 }
+      );
     }
 
     if (!name || !email) {
-      throw new Error("Missing user information");
+      return NextResponse.json(
+        { error: "Missing user information" },
+        { status: 400 }
+      );
     }
 
     const integrationSettings = await checkStripeData(owner_id);
@@ -95,7 +104,10 @@ export async function GET(req: Request) {
       });
 
       if (existingSubscription.data.length > 0) {
-        throw new Error("Customer already has a subscription");
+        return NextResponse.json(
+          { error: "Customer already has a subscription" },
+          { status: 400 }
+        );
       }
     } else {
       // Create a new customer if none exists
@@ -127,22 +139,21 @@ export async function GET(req: Request) {
     });
 
     if (!checkoutSession || !checkoutSession.url) {
-      throw new Error("No session found");
+      return NextResponse.json({ error: "No session found" }, { status: 500 });
     }
 
     // Return the URL for client-side redirection
-    return NextResponse.json({
-      url: checkoutSession.url,
-    });
+    return NextResponse.json(
+      {
+        url: checkoutSession.url,
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error:", error);
-    let errorMessage = "Unknown error";
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
+
     return new NextResponse(JSON.stringify(error), {
       status: 500,
-      statusText: errorMessage,
     });
   }
 }

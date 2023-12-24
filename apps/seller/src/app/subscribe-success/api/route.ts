@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const session_id = searchParams.get("session_id");
 
-    if (!session_id || typeof session_id !== "string") {
+    if (!session_id) {
       return NextResponse.json(
         { error: "Invalid session id" },
         { status: 400 }
@@ -33,9 +33,6 @@ export async function GET(req: NextRequest) {
     if (error instanceof Error) {
       errorMessage = error.message;
     }
-    return new NextResponse(JSON.stringify(error), {
-      status: 500,
-      statusText: errorMessage,
-    });
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
