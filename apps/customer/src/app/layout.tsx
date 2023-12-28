@@ -4,6 +4,7 @@ import { ThemeProvider } from "@mui/material/styles";
 import { CssBaseline } from "@mui/material";
 import Body from "@stripe-discord/ui/components/Body";
 import { THEME } from "@stripe-discord/ui";
+import GlobalElementsProvider from "@stripe-discord/ui/components/GlobalElementsProvider";
 
 // Disable all logging in production
 if (process.env.NEXT_PUBLIC_MODE === "production") {
@@ -49,7 +50,7 @@ export default function RootLayout({
         <Body>
           <SessionProvider>
             <CssBaseline />
-            {children}
+            <GlobalElementsProvider>{children}</GlobalElementsProvider>
           </SessionProvider>
         </Body>
       </html>

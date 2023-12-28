@@ -18,12 +18,12 @@ import {
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { KeyedMutator } from "swr";
-import LoadingBackdrop from "@stripe-discord/ui/components/LoadingBackdrop";
 import { DiscordTier, DiscordTierWithPrices } from "@stripe-discord/types";
 import MainCard from "@stripe-discord/ui/components/MainCard";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import useGlobalElements from "@stripe-discord/ui/hooks/useGlobalElements";
 
 interface TierCardProps {
   tier: DiscordTierWithPrices;
@@ -36,8 +36,9 @@ interface TierCardProps {
 const TierCard: React.FC<TierCardProps> = ({ tier, serverId, mutate }) => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const { openLoadingBackdrop, closeLoadingBackdrop, openSnackbar } =
+    useGlobalElements();
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -58,11 +59,15 @@ const TierCard: React.FC<TierCardProps> = ({ tier, serverId, mutate }) => {
 
   const onAcceptDeleteTier = async () => {
     try {
-      setLoading(true);
+      setOpen(false);
+
+      openLoadingBackdrop();
+
       await fetch(`/api/tier`, {
         method: "DELETE",
         body: JSON.stringify({ tierId: tier.id }),
       });
+
       mutate((prev) => {
         if (!prev) {
           return prev;
@@ -73,9 +78,15 @@ const TierCard: React.FC<TierCardProps> = ({ tier, serverId, mutate }) => {
       });
     } catch (error) {
       console.error(error);
+      openSnackbar({
+        message:
+          error instanceof Error
+            ? error.message
+            : "There was an error deleting the tier",
+        severity: "error",
+      });
     } finally {
-      setLoading(false);
-      setOpen(false);
+      closeLoadingBackdrop();
     }
   };
 
@@ -164,16 +175,12 @@ const TierCard: React.FC<TierCardProps> = ({ tier, serverId, mutate }) => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpen(false)} disabled={loading}>
-            Cancel
-          </Button>
-          <Button onClick={onAcceptDeleteTier} autoFocus disabled={loading}>
+          <Button onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={onAcceptDeleteTier} autoFocus>
             Accept
           </Button>
         </DialogActions>
       </Dialog>
-
-      <LoadingBackdrop open={loading} />
     </>
   );
 };

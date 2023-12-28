@@ -20,8 +20,8 @@ import { controlledFetch } from "@stripe-discord/lib";
 import Main from "@stripe-discord/ui/components/Main";
 import CommonNavbar from "@stripe-discord/ui/components/CommonNavbar";
 import Form from "@stripe-discord/ui/components/Form";
-import LoadingBackdrop from "@stripe-discord/ui/components/LoadingBackdrop";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
+import useGlobalElements from "@stripe-discord/ui/hooks/useGlobalElements";
 
 type FormType = {
   id: string;
@@ -39,6 +39,7 @@ const validationSchema = yup.object({
 function AddServerForm({ availableServers }: { availableServers: any[] }) {
   const router = useRouter();
   const [confirmAddedBot, setConfirmAddedBot] = useState(false);
+  const { openLoadingBackdrop, closeLoadingBackdrop } = useGlobalElements();
 
   const {
     values: { id },
@@ -57,27 +58,28 @@ function AddServerForm({ availableServers }: { availableServers: any[] }) {
     },
     validationSchema: validationSchema,
     onSubmit: async (
-      values: FormType,
-      formikHelpers: FormikHelpers<FormType>
+      { submit, ...data }: FormType,
+      { setErrors, setSubmitting, setStatus }: FormikHelpers<FormType>
     ) => {
-      const { submit, ...data } = values;
-      const { setErrors, setSubmitting, setStatus } = formikHelpers;
-
       try {
-        await controlledFetch(`/add-server/api`, {
+        openLoadingBackdrop();
+
+        await controlledFetch(`/api/guild`, {
           method: "PUT",
           body: JSON.stringify(data),
         });
+
         setErrors({});
         setStatus({ success: true });
-        setSubmitting(false);
         router.push(`/`);
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
         setErrors({ submit: errorMessage });
         setStatus({ success: false });
+      } finally {
         setSubmitting(false);
+        closeLoadingBackdrop();
       }
     },
   });
@@ -192,8 +194,6 @@ function AddServerForm({ availableServers }: { availableServers: any[] }) {
             {errors.submit && touched.submit && (
               <Alert severity="error">{errors.submit}</Alert>
             )}
-
-            <LoadingBackdrop open={isSubmitting} />
           </Form>
         </Box>
       </Box>

@@ -7,35 +7,45 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
 });
 
+/**
+ * Handles GET request for billing portal session creation.
+ * @returns {Promise<NextResponse>} The Next.js response.
+ */
 export async function GET() {
   try {
+    // Authenticate the user
     const session = await auth();
 
     if (!session) {
       return NextResponse.json(
-        { error: "The user is not authenticated." },
+        { error: "User authentication failed." },
         { status: 401 }
       );
     }
 
     const user = session.user;
+    const userEmail = user.email;
 
-    const email = user.email;
-
-    if (!email) {
-      return NextResponse.json({ error: "No email" }, { status: 400 });
+    if (!userEmail) {
+      return NextResponse.json(
+        { error: "No email found for the user." },
+        { status: 400 }
+      );
     }
 
     // Check if a customer with the same email already exists
     const existingCustomer = await stripe.customers.list({
-      email,
+      email: userEmail,
       limit: 1,
     });
 
     const customerAlreadyExists = existingCustomer.data.length > 0;
 
     if (!customerAlreadyExists) {
-      return NextResponse.json({ error: "No customer" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Customer not found." },
+        { status: 400 }
+      );
     }
 
     const customer = existingCustomer.data[0];
@@ -51,9 +61,11 @@ export async function GET() {
   } catch (error) {
     console.error("Error:", error);
     let errorMessage = "Unknown error";
+
     if (error instanceof Error) {
       errorMessage = error.message;
     }
+
     return NextResponse.json(
       {
         error: errorMessage,

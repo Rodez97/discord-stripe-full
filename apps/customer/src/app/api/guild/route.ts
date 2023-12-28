@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const guildId = searchParams.get("guildId");
 
-    if (!guildId || typeof guildId !== "string") {
+    if (!guildId) {
       return NextResponse.json({ error: "No server id" }, { status: 400 });
     }
 
@@ -24,9 +24,11 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const serverRef = MonetizedServers.monetizedServerById(guildId);
+    const serverSnapshot = await MonetizedServers.monetizedServerById(
+      guildId
+    ).get();
 
-    const server = (await serverRef.get()).data();
+    const server = serverSnapshot.data();
 
     if (!server) {
       return NextResponse.json({ error: "Server not found" }, { status: 404 });
@@ -61,8 +63,14 @@ export async function GET(req: NextRequest) {
     );
   } catch (error) {
     console.error("Error:", error);
-    return new NextResponse(JSON.stringify(error), {
-      status: 500,
-    });
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "There was an error fetching the tiers for this server.",
+      },
+      { status: 500 }
+    );
   }
 }

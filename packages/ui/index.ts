@@ -11,6 +11,7 @@ export * from "./components/Empty";
 export * from "./components/ErrorPage";
 export * from "./components/Form";
 export * from "./components/FormContainer";
+export * from "./components/GlobalElementsProvider";
 export * from "./components/LinkTab";
 export * from "./components/LoadingBackdrop";
 export * from "./components/LoadingPage";
@@ -18,6 +19,7 @@ export * from "./components/LoginPage";
 export * from "./components/Main";
 export * from "./components/MainCard";
 export * from "./components/Navbar";
+export * from "./hooks/useGlobalElements";
 // @endindex
 
 export const THEME = createTheme({

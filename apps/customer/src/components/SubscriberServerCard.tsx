@@ -10,15 +10,15 @@ import {
   Menu,
   MenuItem,
 } from "@mui/material";
-import React, { useState } from "react";
+import React from "react";
 import { useRouter } from "next/navigation";
 import MainCard from "@stripe-discord/ui/components/MainCard";
 import { UserSubscription } from "@stripe-discord/types";
-import LoadingBackdrop from "@stripe-discord/ui/components/LoadingBackdrop";
 import HailIcon from "@mui/icons-material/Hail";
 import CreditCardIcon from "@mui/icons-material/CreditCard";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { controlledFetch } from "@stripe-discord/lib";
+import useGlobalElements from "@stripe-discord/ui/hooks/useGlobalElements";
 
 interface SubscriberServerCardProps {
   guild: UserSubscription;
@@ -29,7 +29,8 @@ const SubscriberServerCard: React.FC<SubscriberServerCardProps> = ({
 }) => {
   const router = useRouter();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const [loading, setLoading] = useState(false);
+  const { openLoadingBackdrop, closeLoadingBackdrop, openSnackbar } =
+    useGlobalElements();
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -41,7 +42,8 @@ const SubscriberServerCard: React.FC<SubscriberServerCardProps> = ({
 
   const joinDiscordServer = async () => {
     try {
-      setLoading(true);
+      openLoadingBackdrop();
+
       await controlledFetch(`/api/subscribed`, {
         method: "POST",
         body: JSON.stringify({ guildId: guild.guildId }),
@@ -50,14 +52,22 @@ const SubscriberServerCard: React.FC<SubscriberServerCardProps> = ({
       handleMenuClose();
     } catch (error) {
       console.error(error);
+      openSnackbar({
+        message:
+          error instanceof Error
+            ? error.message
+            : "There was an error joining the server",
+        severity: "error",
+      });
     } finally {
-      setLoading(false);
+      closeLoadingBackdrop();
     }
   };
 
   const manageSubscription = async () => {
     try {
-      setLoading(true);
+      openLoadingBackdrop();
+
       const res = await controlledFetch(
         `/api/customer-billing-portal?guildId=${guild.guildId}`
       );
@@ -67,8 +77,15 @@ const SubscriberServerCard: React.FC<SubscriberServerCardProps> = ({
       handleMenuClose();
     } catch (error) {
       console.error(error);
+      openSnackbar({
+        message:
+          error instanceof Error
+            ? error.message
+            : "There was an error creating the billing portal session",
+        severity: "error",
+      });
     } finally {
-      setLoading(false);
+      closeLoadingBackdrop();
     }
   };
 
@@ -111,7 +128,7 @@ const SubscriberServerCard: React.FC<SubscriberServerCardProps> = ({
       >
         <MenuItem
           onClick={joinDiscordServer}
-          disabled={["active", "trialing"].includes(guild.subscriptionStatus)}
+          disabled={!["active", "trialing"].includes(guild.subscriptionStatus)}
         >
           <ListItemIcon>
             <HailIcon />
@@ -125,8 +142,6 @@ const SubscriberServerCard: React.FC<SubscriberServerCardProps> = ({
           <ListItemText>Manage Subscription</ListItemText>
         </MenuItem>
       </Menu>
-
-      <LoadingBackdrop open={loading} />
     </>
   );
 };

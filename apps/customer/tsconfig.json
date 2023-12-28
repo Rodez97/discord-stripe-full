@@ -28,8 +28,8 @@
     "**/*.ts",
     "**/*.tsx",
     "src/pages/api/auth/[...nextauth].ts",
-    "src/firebase.ts.old",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "../../*.d.ts"
   ],
   "exclude": ["node_modules"]
 }

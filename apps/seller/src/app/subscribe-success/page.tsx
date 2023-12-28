@@ -22,7 +22,7 @@ function MonetizedServersPage() {
   const searchParams = useSearchParams();
   const session_id = searchParams.get("session_id");
   const { data, error, isLoading } = useSWR(
-    `/subscribe-success/api?session_id=${session_id}`,
+    `/api/subscribe-success?session_id=${session_id}`,
     fetcher
   );
 

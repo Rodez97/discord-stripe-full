@@ -1,31 +1,21 @@
-import { firestore } from "firebase-admin";
-import { auth } from "../../../../auth";
-import {
-  CustomerPaths,
-  MonetizedServers,
-  TierPaths,
-} from "@stripe-discord/db-lib";
+import { CustomerPaths, MonetizedServers } from "@stripe-discord/db-lib";
+import * as yup from "yup";
 import { NextRequest, NextResponse } from "next/server";
+import { APIGuild } from "discord-api-types/v10";
+import { firestore } from "firebase-admin";
+import { MonetizedServer } from "@stripe-discord/types";
+import { auth } from "../../../../auth";
+import { checkBotInServer } from "../../../lib/DiscordGuildHelpers";
 
-export async function DELETE(req: NextRequest) {
+export async function GET() {
   try {
-    const data = await req.json();
-    const guildId = data.guildId;
-
-    if (!guildId || typeof guildId !== "string") {
-      return new NextResponse(null, {
-        status: 400,
-        statusText: "Invalid guild id",
-      });
-    }
-
     const session = await auth();
 
     if (!session) {
-      return new NextResponse(null, {
-        status: 401,
-        statusText: "The user is not authenticated.",
-      });
+      return NextResponse.json(
+        { error: "The user is not authenticated." },
+        { status: 401 }
+      );
     }
 
     const user = session.user;
@@ -33,45 +23,52 @@ export async function DELETE(req: NextRequest) {
     const isSubscribed = user.subscription;
 
     if (!isSubscribed) {
-      return new NextResponse(null, {
-        status: 403,
-        statusText: "The user is not subscribed.",
-      });
+      return NextResponse.json(
+        { error: "The user is not subscribed." },
+        { status: 403 }
+      );
     }
 
-    const { id } = user;
+    const monetizedGuildsCountSnapshot =
+      await MonetizedServers.monetizedServers(user.id).count().get();
 
-    const tiers = await TierPaths.userServerTiers(id, guildId).get();
+    const totalGuilds = monetizedGuildsCountSnapshot.data().count;
 
-    // Check if the user has a Stripe customer
-    const customerRef = CustomerPaths.customerByUserId(user.id);
-
-    const batch = firestore().batch();
-
-    if (tiers.size > 0) {
-      tiers.forEach((tier) => {
-        batch.delete(tier.ref);
-      });
+    if (totalGuilds >= 10) {
+      return NextResponse.json(
+        { error: "You can only add 10 servers." },
+        { status: 403 }
+      );
     }
 
-    const serverRef = firestore().collection("monetizedServers").doc(guildId);
-
-    batch.delete(serverRef);
-
-    batch.set(
-      customerRef,
-      {
-        numberOfGuilds: firestore.FieldValue.increment(-1),
+    const request = await fetch("https://discord.com/api/users/@me/guilds", {
+      headers: {
+        Authorization: `Bearer ${user.accessToken}`,
       },
-      { merge: true }
-    );
+    });
 
-    await batch.commit();
+    if (!request.ok) {
+      return NextResponse.json(
+        { error: "Error while fetching the servers." },
+        { status: 500 }
+      );
+    }
+
+    const servers = (await request.json()) as APIGuild[];
+
+    const availableServers = servers.filter((guild) => guild.owner);
+
+    if (availableServers.length === 0) {
+      return NextResponse.json(
+        { error: "You are not the owner of any server." },
+        { status: 403 }
+      );
+    }
 
     // Return the URL for client-side redirection
     return NextResponse.json(
       {
-        success: true,
+        availableServers,
       },
       {
         status: 200,
@@ -94,14 +91,18 @@ export async function DELETE(req: NextRequest) {
   }
 }
 
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const guildId = searchParams.get("guildId");
+const validationSchema = yup.object({
+  id: yup.string().required(),
+  name: yup.string().required(),
+  icon: yup.string(),
+});
 
-    if (!guildId || typeof guildId !== "string") {
-      return NextResponse.json({ error: "Invalid guild id" }, { status: 400 });
-    }
+export async function PUT(req: NextRequest) {
+  try {
+    const data = await req.json();
+
+    // Validate the request body against the schema
+    const { id, name, icon } = await validationSchema.validate(data);
 
     const session = await auth();
 
@@ -123,28 +124,59 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const serverRef = MonetizedServers.monetizedServer(
-      guildId,
-      user.id
-    ).count();
+    const botIsInServer = await checkBotInServer(id);
 
-    const server = (await serverRef.get()).data();
-
-    if (!server.count) {
+    if (!botIsInServer) {
       return NextResponse.json(
-        { error: "The server is not monetized." },
+        { error: "The bot is not in the server." },
         { status: 400 }
       );
     }
 
-    const dbRef = TierPaths.userServerTiers(user.id, guildId);
+    const serverData: MonetizedServer = {
+      id,
+      name,
+      icon: icon || "",
+      ownerId: user.id,
+    };
 
-    const res = await dbRef.get();
+    const serverSnapshot = await MonetizedServers.monetizedServer(
+      serverData.id,
+      user.id
+    )
+      .count()
+      .get();
+
+    // Check if the server already exists
+    const serverSnapshotData = serverSnapshot.data();
+
+    if (serverSnapshotData.count) {
+      return NextResponse.json(
+        { error: "The server is already monetized." },
+        { status: 400 }
+      );
+    }
+
+    const batch = firestore().batch();
+
+    const serverRef = MonetizedServers.monetizedServerById(serverData.id);
+
+    batch.set(serverRef, serverData);
+
+    batch.set(
+      CustomerPaths.customerByUserId(user.id),
+      {
+        numberOfGuilds: firestore.FieldValue.increment(1),
+      },
+      { merge: true }
+    );
+
+    await batch.commit();
 
     // Return the URL for client-side redirection
     return NextResponse.json(
       {
-        tiers: res.empty ? [] : res.docs.map((doc) => doc.data()),
+        success: true,
       },
       {
         status: 200,

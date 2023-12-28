@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "../../../../../auth";
+import { auth } from "../../../../auth";
 import { CustomerPaths } from "@stripe-discord/db-lib";
 import * as yup from "yup";
 
@@ -16,14 +16,16 @@ export async function GET() {
 
     const user = session.user;
 
-    const dbRef = CustomerPaths.customerByUserId(user.id);
+    const customerSnapshot = await CustomerPaths.customerByUserId(
+      user.id
+    ).get();
 
-    const res = (await dbRef.get()).data();
+    const data = customerSnapshot.data();
 
     const settings = {
-      stripePublishableKey: res?.stripePublishableKey || "",
-      stripeSecretKey: res?.stripeSecretKey || "",
-      stripeWebhookSecret: res?.stripeWebhookSecret || "",
+      stripePublishableKey: data?.stripePublishableKey || "",
+      stripeSecretKey: data?.stripeSecretKey || "",
+      stripeWebhookSecret: data?.stripeWebhookSecret || "",
     };
 
     // Return the URL for client-side redirection
@@ -42,10 +44,12 @@ export async function GET() {
     if (error instanceof Error) {
       errorMessage = error.message;
     }
-    return new NextResponse(JSON.stringify(error), {
-      status: 500,
-      statusText: errorMessage,
-    });
+    return NextResponse.json(
+      { error: errorMessage },
+      {
+        status: 500,
+      }
+    );
   }
 }
 
@@ -73,8 +77,9 @@ export async function POST(req: NextRequest) {
 
     const user = session.user;
 
-    const serverRef = CustomerPaths.customerByUserId(user.id);
-    await serverRef.set(validatedData, { merge: true });
+    await CustomerPaths.customerByUserId(user.id).set(validatedData, {
+      merge: true,
+    });
 
     // Return the URL for client-side redirection
     return NextResponse.json(
@@ -91,9 +96,11 @@ export async function POST(req: NextRequest) {
     if (error instanceof Error) {
       errorMessage = error.message;
     }
-    return new NextResponse(JSON.stringify(error), {
-      status: 500,
-      statusText: errorMessage,
-    });
+    return NextResponse.json(
+      { error: errorMessage },
+      {
+        status: 500,
+      }
+    );
   }
 }

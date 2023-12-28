@@ -18,15 +18,15 @@ export async function GET(req: Request) {
     const tierId = searchParams.get("tierId");
     const priceId = searchParams.get("priceId");
 
-    if (!guildId || typeof guildId !== "string") {
+    if (!guildId) {
       return NextResponse.json({ error: "No server id" }, { status: 400 });
     }
 
-    if (!tierId || typeof tierId !== "string") {
+    if (!tierId) {
       return NextResponse.json({ error: "No tier id" }, { status: 400 });
     }
 
-    if (!priceId || typeof priceId !== "string") {
+    if (!priceId) {
       return NextResponse.json({ error: "No price id" }, { status: 400 });
     }
 
@@ -152,8 +152,16 @@ export async function GET(req: Request) {
   } catch (error) {
     console.error("Error:", error);
 
-    return new NextResponse(JSON.stringify(error), {
-      status: 500,
-    });
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "There was an error creating the checkout session.",
+      },
+      {
+        status: 500,
+      }
+    );
   }
 }

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React from "react";
 import { useFormik } from "formik";
 import {
   Alert,
@@ -7,7 +7,6 @@ import {
   Button,
   CircularProgress,
   Paper,
-  Snackbar,
   TextField,
   Typography,
 } from "@mui/material";
@@ -16,9 +15,9 @@ import { KeyedMutator } from "swr";
 import Main from "@stripe-discord/ui/components/Main";
 import CommonNavbar from "@stripe-discord/ui/components/CommonNavbar";
 import Form from "@stripe-discord/ui/components/Form";
-import LoadingBackdrop from "@stripe-discord/ui/components/LoadingBackdrop";
 import { controlledFetch } from "@stripe-discord/lib";
 import { StripeKeys, WithSubmit } from "@stripe-discord/types";
+import useGlobalElements from "@stripe-discord/ui/hooks/useGlobalElements";
 
 const validationSchema = yup.object({
   stripePublishableKey: yup.string().required(),
@@ -38,8 +37,9 @@ function StripeSettingsForm({
     webhookUrl: string;
   }>;
 }) {
-  const [alertOpen, setAlertOpen] = useState(false);
-  const [alertMessage, setAlertMessage] = useState("");
+  const { openLoadingBackdrop, closeLoadingBackdrop, openSnackbar } =
+    useGlobalElements();
+
   const {
     values,
     handleBlur,
@@ -59,10 +59,13 @@ function StripeSettingsForm({
       { setStatus, setErrors, setSubmitting }
     ) => {
       try {
-        await controlledFetch(`/settings/api`, {
+        openLoadingBackdrop();
+
+        await controlledFetch(`/api/settings`, {
           method: "POST",
           body: JSON.stringify(values),
         });
+
         mutate((prev) => {
           if (!prev) {
             return prev;
@@ -72,36 +75,37 @@ function StripeSettingsForm({
             webhookUrl: prev.webhookUrl,
           };
         });
+
         setStatus({ success: true });
         setErrors({});
-        setSubmitting(false);
-        setAlertMessage("The settings have been saved.");
-        setAlertOpen(true);
+
+        openSnackbar({
+          message: "The settings have been saved.",
+          severity: "success",
+        });
       } catch (error) {
         console.error(error);
-        if (error instanceof Error) {
-          setErrors({ stripePublishableKey: error.message });
-        } else {
-          setErrors({ stripePublishableKey: "Unknown error" });
-        }
+        setErrors({
+          submit:
+            error instanceof Error
+              ? error.message
+              : "There was an error saving the settings.",
+        });
         setStatus({ success: false });
+      } finally {
         setSubmitting(false);
+        closeLoadingBackdrop();
       }
     },
   });
 
   const copyWebhookUrl = async () => {
     await navigator.clipboard.writeText(webhookUrl);
-    setAlertMessage("The webhook URL has been copied to your clipboard.");
-    setAlertOpen(true);
-  };
 
-  const handleClose = (_?: React.SyntheticEvent | Event, reason?: string) => {
-    if (reason === "clickaway") {
-      return;
-    }
-
-    setAlertOpen(false);
+    openSnackbar({
+      message: "The webhook URL has been copied to your clipboard.",
+      severity: "success",
+    });
   };
 
   return (
@@ -212,22 +216,6 @@ function StripeSettingsForm({
                 Copy to Clipboard
               </Button>
             </Paper>
-
-            <LoadingBackdrop open={isSubmitting} />
-
-            <Snackbar
-              open={Boolean(alertMessage && alertOpen)}
-              autoHideDuration={6000}
-              onClose={handleClose}
-            >
-              <Alert
-                onClose={handleClose}
-                severity="success"
-                sx={{ width: "100%" }}
-              >
-                {alertMessage}
-              </Alert>
-            </Snackbar>
           </Form>
         </Box>
       </Box>

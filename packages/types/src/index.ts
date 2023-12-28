@@ -35,7 +35,6 @@ export type MonetizedServer = {
   name: string;
   icon: string;
   ownerId: string;
-  botIsInServer: boolean;
 };
 
 export type StripeKeys = {

@@ -19,9 +19,9 @@ import { editTierValidationSchema } from "../validation-schemas/tier";
 import Main from "@stripe-discord/ui/components/Main";
 import CommonNavbar from "@stripe-discord/ui/components/CommonNavbar";
 import Form from "@stripe-discord/ui/components/Form";
-import LoadingBackdrop from "@stripe-discord/ui/components/LoadingBackdrop";
 import { controlledFetch } from "@stripe-discord/lib";
 import { DiscordTier } from "@stripe-discord/types";
+import useGlobalElements from "@stripe-discord/ui/hooks/useGlobalElements";
 
 type FormType = {
   nickname: string;
@@ -53,6 +53,8 @@ function EditTierForm({
   serverId: string;
 }) {
   const router = useRouter();
+  const { openLoadingBackdrop, closeLoadingBackdrop } = useGlobalElements();
+
   const {
     values,
     isSubmitting,
@@ -76,6 +78,8 @@ function EditTierForm({
       { setErrors, setSubmitting, setStatus }
     ) => {
       try {
+        openLoadingBackdrop();
+
         await controlledFetch(`/api/tier/update-tier`, {
           method: "PATCH",
           body: JSON.stringify({
@@ -83,9 +87,9 @@ function EditTierForm({
             ...data,
           }),
         });
+
         setErrors({});
         setStatus({ success: true });
-        setSubmitting(false);
         router.push(`/${serverId}`);
       } catch (error) {
         console.error(error);
@@ -95,7 +99,9 @@ function EditTierForm({
         }
         setErrors({ submit: errorMessage });
         setStatus({ success: false });
+      } finally {
         setSubmitting(false);
+        closeLoadingBackdrop();
       }
     },
   });
@@ -233,8 +239,6 @@ function EditTierForm({
             {errors.submit && touched.submit && (
               <Alert severity="error">{errors.submit}</Alert>
             )}
-
-            <LoadingBackdrop open={isSubmitting} />
 
             <br />
           </Form>

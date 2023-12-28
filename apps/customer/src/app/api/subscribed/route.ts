@@ -30,9 +30,15 @@ export async function GET() {
     );
   } catch (error) {
     console.error("Error:", error);
-    return new NextResponse(JSON.stringify(error), {
-      status: 500,
-    });
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "There was an error fetching the user's subscriptions.",
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -110,8 +116,14 @@ export async function POST(req: NextRequest) {
     );
   } catch (error) {
     console.error("Error:", error);
-    return new NextResponse(JSON.stringify(error), {
-      status: 500,
-    });
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "There was an error adding the role to the user.",
+      },
+      { status: 500 }
+    );
   }
 }

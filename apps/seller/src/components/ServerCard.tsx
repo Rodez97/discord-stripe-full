@@ -18,13 +18,13 @@ import {
 import React, { useState } from "react";
 import { KeyedMutator } from "swr";
 import { useRouter } from "next/navigation";
-import LoadingBackdrop from "@stripe-discord/ui/components/LoadingBackdrop";
 import { controlledFetch } from "@stripe-discord/lib";
 import { MonetizedServer } from "@stripe-discord/types";
 import MainCard from "@stripe-discord/ui/components/MainCard";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
 import DeleteIcon from "@mui/icons-material/Delete";
+import useGlobalElements from "@stripe-discord/ui/hooks/useGlobalElements";
 
 interface ServerCardProps {
   guild: MonetizedServer;
@@ -36,8 +36,9 @@ interface ServerCardProps {
 const ServerCard: React.FC<ServerCardProps> = ({ guild, mutate }) => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const { openLoadingBackdrop, closeLoadingBackdrop, openSnackbar } =
+    useGlobalElements();
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
@@ -55,11 +56,14 @@ const ServerCard: React.FC<ServerCardProps> = ({ guild, mutate }) => {
 
   const onAcceptDeleteServer = async () => {
     try {
-      setLoading(true);
-      await controlledFetch(`/api/guild`, {
+      setOpen(false);
+
+      openLoadingBackdrop();
+
+      await controlledFetch(`/api/guild/${guild.id}`, {
         method: "DELETE",
-        body: JSON.stringify({ guildId: guild.id }),
       });
+
       mutate((prev) => {
         if (!prev) {
           return prev;
@@ -70,9 +74,15 @@ const ServerCard: React.FC<ServerCardProps> = ({ guild, mutate }) => {
       });
     } catch (error) {
       console.error(error);
+      openSnackbar({
+        message:
+          error instanceof Error
+            ? error.message
+            : "There was an error deleting the server",
+        severity: "error",
+      });
     } finally {
-      setLoading(false);
-      setOpen(false);
+      closeLoadingBackdrop();
     }
   };
 
@@ -131,7 +141,7 @@ const ServerCard: React.FC<ServerCardProps> = ({ guild, mutate }) => {
         </MenuItem>
         <MenuItem onClick={handleDeleteServer}>
           <ListItemIcon color="red">
-            <DeleteIcon />
+            <DeleteIcon color="error" />
           </ListItemIcon>
           <ListItemText sx={{ color: "red" }}>Remove</ListItemText>
         </MenuItem>
@@ -150,16 +160,12 @@ const ServerCard: React.FC<ServerCardProps> = ({ guild, mutate }) => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpen(false)} disabled={loading}>
-            Cancel
-          </Button>
-          <Button onClick={onAcceptDeleteServer} autoFocus disabled={loading}>
+          <Button onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={onAcceptDeleteServer} autoFocus>
             Accept
           </Button>
         </DialogActions>
       </Dialog>
-
-      <LoadingBackdrop open={loading} />
     </>
   );
 };

@@ -23,7 +23,7 @@ const fetcher: Fetcher<
 
 function TiersPage({ params: { serverId } }: { params: { serverId: string } }) {
   const { data, error, isLoading, mutate } = useSWR(
-    `/api/guild?guildId=${serverId}`,
+    `/api/guild/${serverId}`,
     fetcher
   );
 

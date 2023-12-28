@@ -2,26 +2,16 @@
 import React, { useMemo, useState } from "react";
 import useSWR, { Fetcher } from "swr";
 import ErrorPage from "../../error";
-import {
-  Alert,
-  Box,
-  Collapse,
-  Container,
-  IconButton,
-  Stack,
-  Switch,
-  Typography,
-} from "@mui/material";
+import { Box, Container, Stack, Switch, Typography } from "@mui/material";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { DiscordTierWithPrices, MonetizedServer } from "@stripe-discord/types";
 import { mainFetcher, controlledFetch } from "@stripe-discord/lib";
 import LoadingPage from "@stripe-discord/ui/components/LoadingPage";
-import LoadingBackdrop from "@stripe-discord/ui/components/LoadingBackdrop";
-import CloseIcon from "@mui/icons-material/Close";
 import PricingCard from "../../../components/PricingCard";
 import Main from "@stripe-discord/ui/components/Main";
 import pricingStyle from "../../../styles/pricing.module.scss";
+import useGlobalElements from "@stripe-discord/ui/hooks/useGlobalElements";
 
 const getCheckoutSessionUrl = (
   guildId: string,
@@ -44,28 +34,31 @@ function TiersPage({ params: { guildId } }: { params: { guildId: string } }) {
     `/api/guild?guildId=${guildId}`,
     fetcher
   );
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
   const [yearly, setYearly] = useState(false);
+  const { openLoadingBackdrop, closeLoadingBackdrop, openSnackbar } =
+    useGlobalElements();
 
   const openCheckoutSession = (tierId: string, priceId: string) => async () => {
     const checkoutSessionUrl = getCheckoutSessionUrl(guildId, tierId, priceId);
 
     try {
-      setLoading(true);
+      openLoadingBackdrop();
+
       const res = await controlledFetch(checkoutSessionUrl);
 
       const { url } = await res.json();
       router.push(url);
     } catch (error) {
       console.error(error);
-      if (error instanceof Error) {
-        setErrorMessage(error.message);
-      } else {
-        setErrorMessage("There was an error");
-      }
+      openSnackbar({
+        message:
+          error instanceof Error
+            ? error.message
+            : "There was an error creating the checkout session",
+        severity: "error",
+      });
     } finally {
-      setLoading(false);
+      closeLoadingBackdrop();
     }
   };
 
@@ -205,36 +198,6 @@ function TiersPage({ params: { guildId } }: { params: { guildId: string } }) {
           })}
         </div>
       </Box>
-
-      <Collapse
-        in={Boolean(errorMessage)}
-        sx={{
-          marginTop: "2rem",
-          marginX: "auto",
-          maxWidth: 400,
-        }}
-      >
-        <Alert
-          severity="error"
-          action={
-            <IconButton
-              aria-label="close"
-              color="inherit"
-              size="small"
-              onClick={() => {
-                setErrorMessage("");
-              }}
-            >
-              <CloseIcon fontSize="inherit" />
-            </IconButton>
-          }
-          sx={{ mb: 2 }}
-        >
-          {errorMessage}
-        </Alert>
-      </Collapse>
-
-      <LoadingBackdrop open={loading} />
     </Main>
   );
 }

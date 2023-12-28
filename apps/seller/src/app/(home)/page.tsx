@@ -23,10 +23,7 @@ const fetcher: Fetcher<
 > = (apiUrl) => mainFetcher(apiUrl);
 
 function MonetizedServersPage() {
-  const { data, error, isLoading, mutate } = useSWR(
-    "/api/monetized-servers",
-    fetcher
-  );
+  const { data, error, isLoading, mutate } = useSWR("/api/guilds", fetcher);
 
   if (isLoading) {
     return <LoadingPage />;
