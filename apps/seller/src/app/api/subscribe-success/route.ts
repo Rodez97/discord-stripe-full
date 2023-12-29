@@ -1,3 +1,5 @@
+import { handleApiError } from "@stripe-discord/lib";
+import { ApiError } from "@stripe-discord/types";
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 
@@ -9,10 +11,7 @@ export async function GET(req: NextRequest) {
     const session_id = searchParams.get("session_id");
 
     if (!session_id) {
-      return NextResponse.json(
-        { error: "Invalid session id" },
-        { status: 400 }
-      );
+      throw new ApiError("Session ID is missing or invalid", 400);
     }
 
     const session = await stripe.checkout.sessions.retrieve(session_id);
@@ -28,11 +27,6 @@ export async function GET(req: NextRequest) {
       }
     );
   } catch (error) {
-    console.error("Error:", error);
-    let errorMessage = "Unknown error";
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    return handleApiError(error);
   }
 }

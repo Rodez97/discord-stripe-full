@@ -1,21 +1,18 @@
-import { CustomerPaths, MonetizedServers } from "@stripe-discord/db-lib";
-import * as yup from "yup";
+import { MonetizedServers } from "@stripe-discord/db-lib";
 import { NextRequest, NextResponse } from "next/server";
 import { APIGuild } from "discord-api-types/v10";
-import { firestore } from "firebase-admin";
-import { MonetizedServer } from "@stripe-discord/types";
+import { ApiError, MonetizedServer } from "@stripe-discord/types";
 import { auth } from "../../../../auth";
 import { checkBotInServer } from "../../../lib/DiscordGuildHelpers";
+import { handleApiError } from "@stripe-discord/lib";
+import { guildValidationSchema } from "../../../lib/validationSchemas";
 
 export async function GET() {
   try {
     const session = await auth();
 
     if (!session) {
-      return NextResponse.json(
-        { error: "The user is not authenticated." },
-        { status: 401 }
-      );
+      throw new ApiError("The user is not authenticated.", 401);
     }
 
     const user = session.user;
@@ -23,10 +20,7 @@ export async function GET() {
     const isSubscribed = user.subscription;
 
     if (!isSubscribed) {
-      return NextResponse.json(
-        { error: "The user is not subscribed." },
-        { status: 403 }
-      );
+      throw new ApiError("The user is not subscribed.", 403);
     }
 
     const monetizedGuildsCountSnapshot =
@@ -35,10 +29,7 @@ export async function GET() {
     const totalGuilds = monetizedGuildsCountSnapshot.data().count;
 
     if (totalGuilds >= 10) {
-      return NextResponse.json(
-        { error: "You can only add 10 servers." },
-        { status: 403 }
-      );
+      throw new ApiError("You can only add 10 servers.", 403);
     }
 
     const request = await fetch("https://discord.com/api/users/@me/guilds", {
@@ -48,10 +39,8 @@ export async function GET() {
     });
 
     if (!request.ok) {
-      return NextResponse.json(
-        { error: "Error while fetching the servers." },
-        { status: 500 }
-      );
+      console.error("Error:", request);
+      throw new ApiError("Error while fetching the servers.", 500);
     }
 
     const servers = (await request.json()) as APIGuild[];
@@ -59,10 +48,7 @@ export async function GET() {
     const availableServers = servers.filter((guild) => guild.owner);
 
     if (availableServers.length === 0) {
-      return NextResponse.json(
-        { error: "You are not the owner of any server." },
-        { status: 403 }
-      );
+      throw new ApiError("You are not the owner of any server.", 400);
     }
 
     // Return the URL for client-side redirection
@@ -75,42 +61,21 @@ export async function GET() {
       }
     );
   } catch (error) {
-    console.error("Error:", error);
-    let errorMessage = "Unknown error";
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
-    return NextResponse.json(
-      {
-        error: errorMessage,
-      },
-      {
-        status: 500,
-      }
-    );
+    return handleApiError(error);
   }
 }
-
-const validationSchema = yup.object({
-  id: yup.string().required(),
-  name: yup.string().required(),
-  icon: yup.string(),
-});
 
 export async function PUT(req: NextRequest) {
   try {
     const data = await req.json();
 
     // Validate the request body against the schema
-    const { id, name, icon } = await validationSchema.validate(data);
+    const { id, name, icon } = await guildValidationSchema.validate(data);
 
     const session = await auth();
 
     if (!session) {
-      return NextResponse.json(
-        { error: "The user is not authenticated." },
-        { status: 401 }
-      );
+      throw new ApiError("The user is not authenticated.", 401);
     }
 
     const user = session.user;
@@ -118,18 +83,15 @@ export async function PUT(req: NextRequest) {
     const isSubscribed = user.subscription;
 
     if (!isSubscribed) {
-      return NextResponse.json(
-        { error: "The user is not subscribed." },
-        { status: 403 }
-      );
+      throw new ApiError("The user is not subscribed.", 403);
     }
 
     const botIsInServer = await checkBotInServer(id);
 
     if (!botIsInServer) {
-      return NextResponse.json(
-        { error: "The bot is not in the server." },
-        { status: 400 }
+      throw new ApiError(
+        "The bot is not in the server, make sure to add it.",
+        400
       );
     }
 
@@ -151,27 +113,12 @@ export async function PUT(req: NextRequest) {
     const serverSnapshotData = serverSnapshot.data();
 
     if (serverSnapshotData.count) {
-      return NextResponse.json(
-        { error: "The server is already monetized." },
-        { status: 400 }
-      );
+      throw new ApiError("The server is already monetized.", 400);
     }
-
-    const batch = firestore().batch();
 
     const serverRef = MonetizedServers.monetizedServerById(serverData.id);
 
-    batch.set(serverRef, serverData);
-
-    batch.set(
-      CustomerPaths.customerByUserId(user.id),
-      {
-        numberOfGuilds: firestore.FieldValue.increment(1),
-      },
-      { merge: true }
-    );
-
-    await batch.commit();
+    await serverRef.set(serverData);
 
     // Return the URL for client-side redirection
     return NextResponse.json(
@@ -183,18 +130,6 @@ export async function PUT(req: NextRequest) {
       }
     );
   } catch (error) {
-    console.error("Error:", error);
-    let errorMessage = "Unknown error";
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
-    return NextResponse.json(
-      {
-        error: errorMessage,
-      },
-      {
-        status: 500,
-      }
-    );
+    return handleApiError(error);
   }
 }

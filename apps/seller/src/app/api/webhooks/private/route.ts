@@ -2,7 +2,8 @@ import { firestore } from "firebase-admin";
 import { CustomerPaths } from "@stripe-discord/db-lib";
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { Customer } from "@stripe-discord/types";
+import { ApiError, Customer } from "@stripe-discord/types";
+import { handleApiError } from "@stripe-discord/lib";
 
 // Initialize the Stripe instance with your secret key
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
@@ -26,14 +27,7 @@ export async function POST(req: NextRequest) {
     const sig = headers.get("stripe-signature");
 
     if (!sig) {
-      return NextResponse.json(
-        {
-          error: "No signature found",
-        },
-        {
-          status: 400,
-        }
-      );
+      throw new ApiError("No signature found", 400);
     }
 
     const rawBody = await req.text();
@@ -60,153 +54,117 @@ export async function POST(req: NextRequest) {
       }
     );
   } catch (error) {
-    console.error("Error:", error);
-    let errorMessage = "Unknown error";
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
-    return NextResponse.json(
-      {
-        error: errorMessage,
-      },
-      {
-        status: 500,
-      }
-    );
+    return handleApiError(error);
   }
 }
 
 const handleSubscriptionEvent = async (event: Stripe.Event) => {
   const { type } = event;
 
-  try {
-    switch (type) {
-      case "customer.subscription.updated":
-      case "customer.subscription.deleted":
-        await handleSubscriptionUpdate(event);
-        break;
-      case "checkout.session.completed":
-        await handleCheckoutSessionComplete(event);
-        break;
-      case "customer.deleted":
-        await handleDeletedCustomer(event);
-        break;
-      default:
-        console.warn(`Unhandled relevant event type: ${type}`);
-        return;
-    }
-  } catch (error: any) {
-    console.error("Error handling subscription event:", error.message);
-    throw error;
+  switch (type) {
+    case "customer.subscription.updated":
+    case "customer.subscription.deleted":
+      await handleSubscriptionUpdate(event);
+      break;
+    case "checkout.session.completed":
+      await handleCheckoutSessionComplete(event);
+      break;
+    case "customer.deleted":
+      await handleDeletedCustomer(event);
+      break;
+    default:
+      console.warn(`Unhandled relevant event type: ${type}`);
+      return;
   }
 };
 
 const handleCheckoutSessionComplete = async (event: Stripe.Event) => {
-  try {
-    // Extract data from the incoming event
-    const session = event.data.object as Stripe.Checkout.Session;
-    const stripeSubscriptionId = session.subscription as string;
-    const stripeCustomerId = session.customer as string;
-    const metadata = session.metadata;
+  // Extract data from the incoming event
+  const session = event.data.object as Stripe.Checkout.Session;
+  const stripeSubscriptionId = session.subscription as string;
+  const stripeCustomerId = session.customer as string;
+  const metadata = session.metadata;
 
-    if (!metadata) {
-      throw new Error("Metadata not found.");
-    }
-
-    // Get the Discord user ID from session metadata
-    const { discordId } = metadata;
-
-    if (!discordId) {
-      throw new Error("Discord ID not found.");
-    }
-
-    const subscription = await stripe.subscriptions.retrieve(
-      stripeSubscriptionId
-    );
-
-    const stripeSubscriptionStatus = subscription.status;
-    const stripeSubscriptionPriceId = subscription.items.data[0].price.id;
-    const stripeSubscriptionItemId = subscription.items.data[0].id;
-
-    const customerData: firestore.PartialWithFieldValue<Customer> = {
-      userId: discordId,
-      stripeCustomerId,
-      stripeSubscriptionId,
-      stripeSubscriptionStatus,
-      stripeSubscriptionPriceId,
-      stripeSubscriptionItemId,
-    };
-
-    await CustomerPaths.customerByUserId(discordId).set(customerData, {
-      merge: true,
-    });
-  } catch (error) {
-    console.error("Error processing checkout session:", error);
-    throw error;
+  if (!metadata) {
+    throw new ApiError("Metadata not found.", 400);
   }
+
+  // Get the Discord user ID from session metadata
+  const { discordId } = metadata;
+
+  if (!discordId) {
+    throw new ApiError("Discord ID not found.", 400);
+  }
+
+  const subscription = await stripe.subscriptions.retrieve(
+    stripeSubscriptionId
+  );
+
+  const stripeSubscriptionStatus = subscription.status;
+  const stripeSubscriptionPriceId = subscription.items.data[0].price.id;
+  const stripeSubscriptionItemId = subscription.items.data[0].id;
+
+  const customerData: firestore.PartialWithFieldValue<Customer> = {
+    userId: discordId,
+    stripeCustomerId,
+    stripeSubscriptionId,
+    stripeSubscriptionStatus,
+    stripeSubscriptionPriceId,
+    stripeSubscriptionItemId,
+  };
+
+  await CustomerPaths.customerByUserId(discordId).set(customerData, {
+    merge: true,
+  });
 };
 
 const handleSubscriptionUpdate = async (event: Stripe.Event) => {
-  try {
-    // Extract relevant data from the incoming event
-    const subscription = event.data.object as Stripe.Subscription;
-    const subscriptionId = subscription.id;
-    const stripeSubscriptionStatus = subscription.status;
-    const stripeSubscriptionPriceId = subscription.items.data[0].price.id;
-    const stripeSubscriptionItemId = subscription.items.data[0].id;
+  // Extract relevant data from the incoming event
+  const subscription = event.data.object as Stripe.Subscription;
+  const subscriptionId = subscription.id;
+  const stripeSubscriptionStatus = subscription.status;
+  const stripeSubscriptionPriceId = subscription.items.data[0].price.id;
+  const stripeSubscriptionItemId = subscription.items.data[0].id;
 
-    const customerSnapshot = await CustomerPaths.customerBySubscriptionId(
-      subscriptionId
-    ).get();
+  const customerSnapshot = await CustomerPaths.customerBySubscriptionId(
+    subscriptionId
+  ).get();
 
-    if (customerSnapshot.empty) {
-      throw new Error("Customer not found.");
-    }
-
-    const customerDocument = customerSnapshot.docs[0];
-
-    const partialCustomerData: Partial<Customer> = {
-      stripeSubscriptionStatus,
-      stripeSubscriptionPriceId,
-      stripeSubscriptionItemId,
-    };
-
-    await customerDocument.ref.update(partialCustomerData);
-  } catch (error: any) {
-    console.error("Error deleting subscription:", error.message);
-    throw error;
+  if (customerSnapshot.empty) {
+    throw new ApiError("Customer not found.", 404);
   }
+
+  const partialCustomerData: Partial<Customer> = {
+    stripeSubscriptionStatus,
+    stripeSubscriptionPriceId,
+    stripeSubscriptionItemId,
+  };
+
+  await customerSnapshot.docs[0].ref.update(partialCustomerData);
 };
 
 const handleDeletedCustomer = async (event: Stripe.Event) => {
-  try {
-    // Extract relevant data from the incoming event
-    const customer = event.data.object as
-      | Stripe.Customer
-      | Stripe.DeletedCustomer;
-    const customerId = customer.id;
+  // Extract relevant data from the incoming event
+  const customer = event.data.object as
+    | Stripe.Customer
+    | Stripe.DeletedCustomer;
+  const customerId = customer.id;
 
-    const customerSnapshot = await CustomerPaths.customerByCustomerId(
-      customerId
-    ).get();
+  const customerSnapshot = await CustomerPaths.customerByCustomerId(
+    customerId
+  ).get();
 
-    if (customerSnapshot.empty) {
-      throw new Error("Customer not found.");
-    }
-
-    const customerDocument = customerSnapshot.docs[0];
-
-    const partialCustomerData: Partial<Customer> = {
-      stripeCustomerId: "",
-      stripeSubscriptionId: "",
-      stripeSubscriptionItemId: "",
-      stripeSubscriptionPriceId: "",
-      stripeSubscriptionStatus: "",
-    };
-
-    await customerDocument.ref.update(partialCustomerData);
-  } catch (error: any) {
-    console.error("Error deleting subscription:", error.message);
-    throw error;
+  if (customerSnapshot.empty) {
+    throw new ApiError("Customer not found.", 404);
   }
+
+  const partialCustomerData: Partial<Customer> = {
+    stripeCustomerId: "",
+    stripeSubscriptionId: "",
+    stripeSubscriptionItemId: "",
+    stripeSubscriptionPriceId: "",
+    stripeSubscriptionStatus: "",
+  };
+
+  await customerSnapshot.docs[0].ref.update(partialCustomerData);
 };

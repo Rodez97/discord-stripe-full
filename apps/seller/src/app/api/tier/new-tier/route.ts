@@ -4,26 +4,24 @@ import Stripe from "stripe";
 import { firestore } from "firebase-admin";
 import { NextRequest, NextResponse } from "next/server";
 import { APIRole } from "discord-api-types/v10";
-import { newTierValidationSchema } from "../../../../validation-schemas/tier";
+import { newTierValidationSchema } from "../../../../lib/validationSchemas";
 import { TierPaths } from "@stripe-discord/db-lib";
-import { DiscordTierWithPrices } from "@stripe-discord/types";
+import { ApiError, DiscordTierWithPrices } from "@stripe-discord/types";
+import { handleApiError } from "@stripe-discord/lib";
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const guildId = searchParams.get("guildId");
 
-    if (!guildId || typeof guildId !== "string") {
-      return NextResponse.json({ error: "Invalid guild id" }, { status: 400 });
+    if (!guildId) {
+      throw new ApiError("Guild ID is missing or invalid", 400);
     }
 
     const session = await auth();
 
     if (!session) {
-      return NextResponse.json(
-        { error: "The user is not authenticated." },
-        { status: 401 }
-      );
+      throw new ApiError("The user is not authenticated.", 401);
     }
 
     const user = session.user;
@@ -31,10 +29,7 @@ export async function GET(req: NextRequest) {
     const isSubscribed = user.subscription;
 
     if (!isSubscribed) {
-      return NextResponse.json(
-        { error: "The user is not subscribed." },
-        { status: 403 }
-      );
+      throw new ApiError("The user is not subscribed.", 403);
     }
 
     const rolesRequest = await fetch(
@@ -47,23 +42,16 @@ export async function GET(req: NextRequest) {
     );
 
     if (!rolesRequest.ok) {
-      return NextResponse.json(
-        { error: "Error while fetching the roles." },
-        { status: 500 }
-      );
+      console.error("Error:", rolesRequest);
+      throw new ApiError("Error while fetching the roles.", 500);
     }
 
     const rolesData = (await rolesRequest.json()) as APIRole[];
 
-    const roles: APIRole[] = rolesData
-      ? rolesData.filter((role) => !role.managed)
-      : [];
+    const roles = rolesData ? rolesData.filter((role) => !role.managed) : [];
 
     if (!roles.length) {
-      return NextResponse.json(
-        { error: "The server has no available roles." },
-        { status: 400 }
-      );
+      throw new ApiError("The server has no available roles.", 400);
     }
 
     return NextResponse.json(
@@ -75,19 +63,7 @@ export async function GET(req: NextRequest) {
       }
     );
   } catch (error) {
-    console.error("Error:", error);
-    let errorMessage = "Unknown error";
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
-    return NextResponse.json(
-      {
-        error: errorMessage,
-      },
-      {
-        status: 500,
-      }
-    );
+    return handleApiError(error);
   }
 }
 
@@ -96,10 +72,7 @@ export async function PUT(req: NextRequest) {
     const session = await auth();
 
     if (!session) {
-      return NextResponse.json(
-        { error: "The user is not authenticated." },
-        { status: 401 }
-      );
+      throw new ApiError("The user is not authenticated.", 401);
     }
 
     const user = session.user;
@@ -107,17 +80,14 @@ export async function PUT(req: NextRequest) {
     const isSubscribed = user.subscription;
 
     if (!isSubscribed) {
-      return NextResponse.json(
-        { error: "The user is not subscribed." },
-        { status: 403 }
-      );
+      throw new ApiError("The user is not subscribed.", 403);
     }
 
     const data = await req.json();
     const { serverId, ...tierData } = data;
 
     if (!serverId || typeof serverId !== "string") {
-      return NextResponse.json({ error: "Invalid server id" }, { status: 400 });
+      throw new ApiError("Invalid server ID", 400);
     }
 
     const validatedTierData = await newTierValidationSchema.validate(tierData);
@@ -142,32 +112,26 @@ export async function PUT(req: NextRequest) {
     const product = await stripe.products.retrieve(productId);
 
     if (!product) {
-      return NextResponse.json(
-        { error: "Invalid product ID" },
-        { status: 400 }
-      );
+      throw new ApiError("Invalid product ID", 400);
     }
 
     const monthlyPrice = await stripe.prices.retrieve(monthlyPriceId);
 
     if (!monthlyPrice) {
-      return NextResponse.json(
-        { error: "Invalid monthly price ID" },
-        { status: 400 }
-      );
+      throw new ApiError("Invalid monthly price ID", 400);
     }
 
     if (monthlyPrice.product !== productId) {
-      return NextResponse.json(
-        { error: "The monthly price ID is not for the provided product ID" },
-        { status: 400 }
+      throw new ApiError(
+        "The monthly price ID is not for the provided product ID",
+        400
       );
     }
 
     if (monthlyPrice.recurring?.interval !== "month") {
-      return NextResponse.json(
-        { error: "The monthly price is not a monthly recurring price" },
-        { status: 400 }
+      throw new ApiError(
+        "The monthly price is not a monthly recurring price",
+        400
       );
     }
 
@@ -179,27 +143,20 @@ export async function PUT(req: NextRequest) {
       const yearlyPrice = await stripe.prices.retrieve(yearlyPriceId);
 
       if (!yearlyPrice) {
-        return NextResponse.json(
-          { error: "Invalid yearly price ID" },
-          { status: 400 }
-        );
+        throw new ApiError("Invalid yearly price ID", 400);
       }
 
       if (yearlyPrice.product !== productId) {
-        return NextResponse.json(
-          {
-            error: "The yearly price ID is not for the provided product ID",
-          },
-          { status: 400 }
+        throw new ApiError(
+          "The yearly price ID is not for the provided product ID",
+          400
         );
       }
 
       if (yearlyPrice.recurring?.interval !== "year") {
-        return NextResponse.json(
-          {
-            error: "The yearly price is not a yearly recurring price",
-          },
-          { status: 400 }
+        throw new ApiError(
+          "The yearly price is not a yearly recurring price",
+          400
         );
       }
 
@@ -210,9 +167,7 @@ export async function PUT(req: NextRequest) {
 
     tierWithPrices.currency = monthlyPrice.currency;
 
-    const tierRef = TierPaths.collection;
-
-    await tierRef.add(tierWithPrices);
+    await TierPaths.collection.add(tierWithPrices);
 
     // Return the URL for client-side redirection
     return NextResponse.json(
@@ -224,18 +179,6 @@ export async function PUT(req: NextRequest) {
       }
     );
   } catch (error) {
-    console.error("Error:", error);
-    let errorMessage = "Unknown error";
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
-    return NextResponse.json(
-      {
-        error: errorMessage,
-      },
-      {
-        status: 500,
-      }
-    );
+    return handleApiError(error);
   }
 }

@@ -1,22 +1,14 @@
 import { firestore } from "firebase-admin";
 import { auth } from "../../../../../auth";
-import {
-  CustomerPaths,
-  MonetizedServers,
-  TierPaths,
-} from "@stripe-discord/db-lib";
+import { MonetizedServers, TierPaths } from "@stripe-discord/db-lib";
 import { NextRequest, NextResponse } from "next/server";
+import { ApiError } from "@stripe-discord/types";
+import { handleApiError } from "@stripe-discord/lib";
 
-/**
- * Handles DELETE request for unsubscribing a server.
- * @param {NextRequest} req - The Next.js request object.
- * @param {{ params: { guildId: string } }} params - The request parameters.
- * @returns {Promise<NextResponse>} The Next.js response.
- */
 export async function DELETE(
-  req: NextRequest,
+  _: NextRequest,
   { params }: { params: { guildId: string } }
-): Promise<NextResponse> {
+) {
   try {
     const { guildId } = params;
 
@@ -24,10 +16,7 @@ export async function DELETE(
     const session = await auth();
 
     if (!session) {
-      return new NextResponse(null, {
-        status: 401,
-        statusText: "User authentication failed.",
-      });
+      throw new ApiError("The user is not authenticated.", 401);
     }
 
     const user = session.user;
@@ -35,20 +24,14 @@ export async function DELETE(
     const isSubscribed = user.subscription;
 
     if (!isSubscribed) {
-      return new NextResponse(null, {
-        status: 403,
-        statusText: "User is not subscribed.",
-      });
+      throw new ApiError("The user is not subscribed.", 403);
     }
 
     const { id } = user;
 
-    const tiers = await TierPaths.userServerTiers(id, guildId).get();
-
-    // Check if the user has a Stripe customer
-    const customerRef = CustomerPaths.customerByUserId(user.id);
-
     const batch = firestore().batch();
+
+    const tiers = await TierPaths.userServerTiers(id, guildId).get();
 
     if (tiers.size > 0) {
       tiers.forEach((tier) => {
@@ -56,17 +39,7 @@ export async function DELETE(
       });
     }
 
-    const serverRef = firestore().collection("monetizedServers").doc(guildId);
-
-    batch.delete(serverRef);
-
-    batch.set(
-      customerRef,
-      {
-        numberOfGuilds: firestore.FieldValue.increment(-1),
-      },
-      { merge: true }
-    );
+    batch.delete(MonetizedServers.monetizedServerById(guildId));
 
     await batch.commit();
 
@@ -80,32 +53,14 @@ export async function DELETE(
       }
     );
   } catch (error) {
-    console.error("Error:", error);
-    let errorMessage = "Unknown error";
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
-    return NextResponse.json(
-      {
-        error: errorMessage,
-      },
-      {
-        status: 500,
-      }
-    );
+    return handleApiError(error);
   }
 }
 
-/**
- * Handles GET request to retrieve tiers for a subscribed server.
- * @param {NextRequest} req - The Next.js request object.
- * @param {{ params: { guildId: string } }} params - The request parameters.
- * @returns {Promise<NextResponse>} The Next.js response.
- */
 export async function GET(
-  req: NextRequest,
+  _: NextRequest,
   { params }: { params: { guildId: string } }
-): Promise<NextResponse> {
+) {
   try {
     const { guildId } = params;
 
@@ -113,10 +68,7 @@ export async function GET(
     const session = await auth();
 
     if (!session) {
-      return NextResponse.json(
-        { error: "User authentication failed." },
-        { status: 401 }
-      );
+      throw new ApiError("The user is not authenticated.", 401);
     }
 
     const user = session.user;
@@ -124,10 +76,7 @@ export async function GET(
     const isSubscribed = user.subscription;
 
     if (!isSubscribed) {
-      return NextResponse.json(
-        { error: "User is not subscribed." },
-        { status: 403 }
-      );
+      throw new ApiError("The user is not subscribed.", 403);
     }
 
     const serverRef = MonetizedServers.monetizedServer(
@@ -138,10 +87,7 @@ export async function GET(
     const server = (await serverRef.get()).data();
 
     if (!server.count) {
-      return NextResponse.json(
-        { error: "The server is not monetized." },
-        { status: 400 }
-      );
+      throw new ApiError("The server is not monetized.", 400);
     }
 
     const dbRef = TierPaths.userServerTiers(user.id, guildId);
@@ -158,18 +104,6 @@ export async function GET(
       }
     );
   } catch (error) {
-    console.error("Error:", error);
-    let errorMessage = "Unknown error";
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
-    return NextResponse.json(
-      {
-        error: errorMessage,
-      },
-      {
-        status: 500,
-      }
-    );
+    return handleApiError(error);
   }
 }

@@ -5,6 +5,8 @@ import {
   TierPaths,
   MonetizedServers,
 } from "@stripe-discord/db-lib";
+import { ApiError } from "@stripe-discord/types";
+import { handleApiError } from "@stripe-discord/lib";
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,16 +14,13 @@ export async function GET(req: NextRequest) {
     const guildId = searchParams.get("guildId");
 
     if (!guildId) {
-      return NextResponse.json({ error: "No server id" }, { status: 400 });
+      throw new ApiError("No server id", 400);
     }
 
     const session = await auth();
 
     if (!session) {
-      return NextResponse.json(
-        { error: "The user is not authenticated." },
-        { status: 401 }
-      );
+      throw new ApiError("The user is not authenticated.", 401);
     }
 
     const serverSnapshot = await MonetizedServers.monetizedServerById(
@@ -31,7 +30,7 @@ export async function GET(req: NextRequest) {
     const server = serverSnapshot.data();
 
     if (!server) {
-      return NextResponse.json({ error: "Server not found" }, { status: 404 });
+      throw new ApiError("Server not found", 404);
     }
 
     const { ownerId } = server;
@@ -43,9 +42,9 @@ export async function GET(req: NextRequest) {
       integrationSettings?.stripeSubscriptionStatus !== "active" &&
       integrationSettings?.stripeSubscriptionStatus !== "trialing"
     ) {
-      return NextResponse.json(
-        { error: "The tiers for this server are not available at the moment" },
-        { status: 400 }
+      throw new ApiError(
+        "The tiers for this server are not available at the moment.",
+        400
       );
     }
 
@@ -62,15 +61,6 @@ export async function GET(req: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error:", error);
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "There was an error fetching the tiers for this server.",
-      },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

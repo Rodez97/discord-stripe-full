@@ -2,7 +2,9 @@ import { auth } from "../../../../../auth";
 import { TierPaths } from "@stripe-discord/db-lib";
 import { NextRequest, NextResponse } from "next/server";
 import { APIRole } from "discord-api-types/v10";
-import { editTierValidationSchema } from "../../../../validation-schemas/tier";
+import { editTierValidationSchema } from "../../../../lib/validationSchemas";
+import { ApiError } from "@stripe-discord/types";
+import { handleApiError } from "@stripe-discord/lib";
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,21 +12,18 @@ export async function GET(req: NextRequest) {
     const guildId = searchParams.get("guildId");
     const tierId = searchParams.get("tierId");
 
-    if (!guildId || typeof guildId !== "string") {
-      return NextResponse.json({ error: "Invalid guild id" }, { status: 400 });
+    if (!guildId) {
+      throw new ApiError("Guild ID is missing or invalid", 400);
     }
 
-    if (!tierId || typeof tierId !== "string") {
-      return NextResponse.json({ error: "Invalid tier id" }, { status: 400 });
+    if (!tierId) {
+      throw new ApiError("Tier ID is missing or invalid", 400);
     }
 
     const session = await auth();
 
     if (!session) {
-      return NextResponse.json(
-        { error: "The user is not authenticated." },
-        { status: 401 }
-      );
+      throw new ApiError("The user is not authenticated.", 401);
     }
 
     const user = session.user;
@@ -32,19 +31,13 @@ export async function GET(req: NextRequest) {
     const isSubscribed = user.subscription;
 
     if (!isSubscribed) {
-      return NextResponse.json(
-        { error: "The user is not subscribed." },
-        { status: 403 }
-      );
+      throw new ApiError("The user is not subscribed.", 403);
     }
 
     const tier = (await TierPaths.tier(tierId).get()).data();
 
     if (!tier) {
-      return NextResponse.json(
-        { error: "The tier does not exist." },
-        { status: 400 }
-      );
+      throw new ApiError("The tier does not exist.", 400);
     }
 
     const rolesRequest = await fetch(
@@ -57,17 +50,13 @@ export async function GET(req: NextRequest) {
     );
 
     if (!rolesRequest.ok) {
-      return NextResponse.json(
-        { error: "Error while fetching the roles." },
-        { status: 500 }
-      );
+      console.error("Error:", rolesRequest);
+      throw new ApiError("Error while fetching the roles.", 500);
     }
 
     const rolesData = (await rolesRequest.json()) as APIRole[];
 
-    const roles: APIRole[] = rolesData
-      ? rolesData.filter((role) => !role.managed)
-      : [];
+    const roles = rolesData ? rolesData.filter((role) => !role.managed) : [];
 
     return NextResponse.json(
       {
@@ -79,19 +68,7 @@ export async function GET(req: NextRequest) {
       }
     );
   } catch (error) {
-    console.error("Error:", error);
-    let errorMessage = "Unknown error";
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
-    return NextResponse.json(
-      {
-        error: errorMessage,
-      },
-      {
-        status: 500,
-      }
-    );
+    return handleApiError(error);
   }
 }
 
@@ -100,17 +77,14 @@ export async function PATCH(req: NextRequest) {
     const session = await auth();
 
     if (!session) {
-      return NextResponse.json(
-        { error: "The user is not authenticated." },
-        { status: 401 }
-      );
+      throw new ApiError("The user is not authenticated.", 401);
     }
 
     const data = await req.json();
     const { tierId, ...tierData } = data;
 
     if (!tierId || typeof tierId !== "string") {
-      return NextResponse.json({ error: "Invalid tier id" }, { status: 400 });
+      throw new ApiError("Invalid tier id", 400);
     }
 
     const validatedTierData = await editTierValidationSchema.validate(tierData);
@@ -128,18 +102,6 @@ export async function PATCH(req: NextRequest) {
       }
     );
   } catch (error) {
-    console.error("Error:", error);
-    let errorMessage = "Unknown error";
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
-    return NextResponse.json(
-      {
-        error: errorMessage,
-      },
-      {
-        status: 500,
-      }
-    );
+    return handleApiError(error);
   }
 }

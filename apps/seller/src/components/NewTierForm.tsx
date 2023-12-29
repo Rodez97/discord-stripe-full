@@ -14,7 +14,7 @@ import {
   TextField,
 } from "@mui/material";
 import BenefitsControl from "./BenefitsControl";
-import { newTierValidationSchema } from "../validation-schemas/tier";
+import { newTierValidationSchema } from "../lib/validationSchemas";
 import Main from "@stripe-discord/ui/components/Main";
 import CommonNavbar from "@stripe-discord/ui/components/CommonNavbar";
 import Form from "@stripe-discord/ui/components/Form";

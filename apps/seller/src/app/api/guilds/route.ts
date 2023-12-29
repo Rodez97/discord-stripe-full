@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
 import { auth } from "../../../../auth";
 import { MonetizedServers } from "@stripe-discord/db-lib";
+import { ApiError } from "@stripe-discord/types";
+import { handleApiError } from "@stripe-discord/lib";
 
 export async function GET() {
   try {
     const session = await auth();
 
     if (!session) {
-      return NextResponse.json(
-        { error: "The user is not authenticated." },
-        { status: 401 }
-      );
+      throw new ApiError("The user is not authenticated.", 401);
     }
 
     const user = session.user;
@@ -32,18 +31,6 @@ export async function GET() {
       }
     );
   } catch (error) {
-    console.error("Error:", error);
-    let errorMessage = "Unknown error";
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
-    return NextResponse.json(
-      {
-        error: errorMessage,
-      },
-      {
-        status: 500,
-      }
-    );
+    return handleApiError(error);
   }
 }

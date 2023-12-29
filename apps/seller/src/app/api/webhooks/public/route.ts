@@ -3,8 +3,9 @@ import Stripe from "stripe";
 import { checkStripeData } from "../../../../lib/stripe-utils";
 import { TierPaths, UserSubscriptions } from "@stripe-discord/db-lib";
 import { REST } from "@discordjs/rest";
-import { UserSubscription } from "@stripe-discord/types";
-import { Routes } from "discord-api-types/v10";
+import { ApiError, UserSubscription } from "@stripe-discord/types";
+import { APIPartialGuild, Routes } from "discord-api-types/v10";
+import { handleApiError } from "@stripe-discord/lib";
 
 const DiscordRest = new REST({ version: "10" }).setToken(
   process.env.DISCORD_BOT_TOKEN
@@ -16,14 +17,7 @@ export async function POST(req: NextRequest) {
     const { headers } = req;
 
     if (!sellerId) {
-      return NextResponse.json(
-        {
-          error: "Seller ID is missing or invalid",
-        },
-        {
-          status: 400,
-        }
-      );
+      throw new ApiError("Seller ID is missing or invalid", 400);
     }
 
     const relevantEvents = new Set([
@@ -36,14 +30,7 @@ export async function POST(req: NextRequest) {
     const sig = headers.get("stripe-signature");
 
     if (!sig) {
-      return NextResponse.json(
-        {
-          error: "No signature found",
-        },
-        {
-          status: 400,
-        }
-      );
+      throw new ApiError("No signature found", 400);
     }
 
     const integrationSettings = await checkStripeData(sellerId);
@@ -79,19 +66,7 @@ export async function POST(req: NextRequest) {
       }
     );
   } catch (error) {
-    console.error("Error:", error);
-    let errorMessage = "Unknown error";
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
-    return NextResponse.json(
-      {
-        error: errorMessage,
-      },
-      {
-        status: 500,
-      }
-    );
+    return handleApiError(error);
   }
 }
 
@@ -102,31 +77,26 @@ const handleSubscriptionEvent = async (
 ) => {
   const { data, type } = event;
 
-  try {
-    switch (type) {
-      case "customer.subscription.updated":
-        {
-          const subscription = data.object as Stripe.Subscription;
-          if (subscription.status === "canceled") {
-            await handleDeleteSubscription(event);
-          } else {
-            await handleChangedProduct(event);
-          }
+  switch (type) {
+    case "customer.subscription.updated":
+      {
+        const subscription = data.object as Stripe.Subscription;
+        if (subscription.status === "canceled") {
+          await handleDeleteSubscription(event);
+        } else {
+          await handleUpdateSubscription(event);
         }
-        break;
-      case "customer.subscription.deleted":
-        await handleDeleteSubscription(event);
-        break;
-      case "checkout.session.completed":
-        await handleCheckoutSessionComplete(event, sellerDiscordId, stripe);
-        break;
-      default:
-        console.warn(`Unhandled relevant event type: ${type}`);
-        return;
-    }
-  } catch (error: any) {
-    console.error("Error handling subscription event:", error.message);
-    throw error;
+      }
+      break;
+    case "customer.subscription.deleted":
+      await handleDeleteSubscription(event);
+      break;
+    case "checkout.session.completed":
+      await handleCheckoutSessionComplete(event, sellerDiscordId, stripe);
+      break;
+    default:
+      console.warn(`Unhandled relevant event type: ${type}`);
+      return;
   }
 };
 
@@ -135,167 +105,171 @@ const handleCheckoutSessionComplete = async (
   sellerDiscordId: string,
   stripe: Stripe
 ) => {
-  try {
-    // Extract data from the incoming event
-    const session = event.data.object as Stripe.Checkout.Session;
-    const subscriptionId = session.subscription as string;
-    const customerId = session.customer as string;
-    const metadata = session.metadata;
+  // Extract data from the incoming event
+  const session = event.data.object as Stripe.Checkout.Session;
+  const subscriptionId = session.subscription as string;
+  const customerId = session.customer as string;
+  const metadata = session.metadata;
 
-    if (!metadata) {
-      throw new Error("Metadata not found.");
-    }
-
-    const { tierId, guildId, accessToken, customerDiscordId } = metadata;
-
-    if (!tierId) {
-      throw new Error("Tier ID not found.");
-    }
-
-    if (!guildId) {
-      throw new Error("Guild ID not found.");
-    }
-
-    if (!accessToken) {
-      throw new Error("Access token not found.");
-    }
-
-    if (!customerDiscordId) {
-      throw new Error("Customer Discord ID not found.");
-    }
-
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-
-    const tierSnapshot = await TierPaths.tier(tierId).get();
-
-    const tier = tierSnapshot.data();
-
-    if (!tier) {
-      throw new Error("Tier not found.");
-    }
-
-    const { discordRoles } = tier;
-
-    await DiscordRest.put(Routes.guildMember(guildId, customerDiscordId), {
-      body: {
-        access_token: accessToken,
-        roles: discordRoles,
-      },
-    });
-
-    const guildData = (await DiscordRest.get(Routes.guild(guildId))) as any;
-
-    await UserSubscriptions.userSubscriptionBySubId(subscriptionId).set({
-      userId: customerDiscordId,
-      subscriptionId,
-      subscriptionStatus: subscription.status,
-      customerId,
-      guildId,
-      sellerId: sellerDiscordId,
-      guildName: guildData.name,
-      guildIcon: guildData.icon || "",
-      tierId,
-      roles: discordRoles,
-    });
-  } catch (error) {
-    console.error("Error processing checkout session:", error);
-    throw error;
+  if (!metadata) {
+    throw new ApiError("Metadata not found.", 400);
   }
+
+  const { tierId, guildId, accessToken, customerDiscordId } = metadata;
+
+  // Validate required metadata
+  if (!tierId || !guildId || !accessToken || !customerDiscordId) {
+    throw new ApiError("Invalid metadata.", 400);
+  }
+
+  // Retrieve subscription information from Stripe
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+  // Retrieve tier information from the database
+  const tierSnapshot = await TierPaths.tier(tierId).get();
+  const tier = tierSnapshot.data();
+
+  if (!tier) {
+    throw new ApiError("Tier not found.", 400);
+  }
+
+  const { discordRoles } = tier;
+
+  // Update Discord roles for the guild member
+  await DiscordRest.put(Routes.guildMember(guildId, customerDiscordId), {
+    body: {
+      access_token: accessToken,
+      roles: discordRoles,
+    },
+  });
+
+  // Retrieve guild information from Discord API
+  const guildData = (await DiscordRest.get(
+    Routes.guild(guildId)
+  )) as APIPartialGuild;
+
+  // Store subscription information in the database
+  await UserSubscriptions.userSubscriptionBySubId(subscriptionId).set({
+    userId: customerDiscordId,
+    subscriptionId,
+    subscriptionStatus: subscription.status,
+    customerId,
+    guildId,
+    sellerId: sellerDiscordId,
+    guildName: guildData.name,
+    guildIcon: guildData.icon || "",
+    tierId,
+    roles: discordRoles,
+  });
 };
 
 const handleDeleteSubscription = async (event: Stripe.Event) => {
-  try {
-    // Extract relevant data from the incoming event
-    const subscription = event.data.object as Stripe.Subscription;
-    const subscriptionId = subscription.id;
+  // Extract relevant data from the incoming event
+  const subscription = event.data.object as Stripe.Subscription;
+  const subscriptionId = subscription.id;
 
-    const subscriptionRef =
-      UserSubscriptions.userSubscriptionBySubId(subscriptionId);
+  // Retrieve subscription information from the database
+  const subscriptionSnapshot = await UserSubscriptions.userSubscriptionBySubId(
+    subscriptionId
+  ).get();
 
-    const subscriptionData = (await subscriptionRef.get()).data();
+  const subscriptionData = subscriptionSnapshot.data();
 
-    if (!subscriptionData) {
-      throw new Error("Subscription not found.");
-    }
+  if (!subscriptionData) {
+    throw new ApiError("Subscription not found.", 400);
+  }
 
-    const { guildId, userId } = subscriptionData;
+  const { guildId, userId } = subscriptionData;
 
-    // Delete the subscription reference from Firestore
-    await subscriptionRef.delete();
+  // Delete the subscription reference from Firestore
+  await subscriptionSnapshot.ref.delete();
 
+  // Check if the user is still in the guild
+  const member = await DiscordRest.get(Routes.guildMember(guildId, userId));
+
+  if (member) {
+    // If so, remove the roles
     await DiscordRest.patch(Routes.guildMember(guildId, userId), {
       body: {
         roles: [],
       },
     });
-  } catch (error: any) {
-    console.error("Error deleting subscription:", error.message);
-    throw error;
   }
 };
 
-const handleChangedProduct = async (event: Stripe.Event) => {
-  try {
-    // Extract relevant data from the incoming event
-    const { object, previous_attributes } = event.data;
-    const currentSubscription = object as Stripe.Subscription;
-    const oldSubscription = previous_attributes as Partial<Stripe.Subscription>;
-    const subscriptionId = currentSubscription.id;
+const handleUpdateSubscription = async (event: Stripe.Event) => {
+  // Extract relevant data from the incoming event
+  const { object, previous_attributes } = event.data;
+  const currentSubscription = object as Stripe.Subscription;
+  const status = currentSubscription.status;
+  const oldSubscription = previous_attributes as Partial<Stripe.Subscription>;
+  const subscriptionId = currentSubscription.id;
 
-    // Get IDs of current and previous products
-    const currentProductId = currentSubscription.items?.data?.[0]?.price
-      ?.product as string | undefined;
-    const oldProductId = oldSubscription.items?.data?.[0]?.price?.product as
-      | string
-      | undefined;
+  // Get IDs of current and previous products
+  const productId = currentSubscription.items?.data?.[0]?.price?.product;
+  const oldProductId = oldSubscription.items?.data?.[0]?.price?.product;
 
-    const subscriptionSnapshot =
-      await UserSubscriptions.userSubscriptionBySubId(subscriptionId).get();
+  // Retrieve subscription information from the database
+  const subscriptionSnapshot = await UserSubscriptions.userSubscriptionBySubId(
+    subscriptionId
+  ).get();
 
-    const subscriptionData = subscriptionSnapshot.data();
+  const subscriptionData = subscriptionSnapshot.data();
 
-    if (!subscriptionData) {
-      throw new Error("Subscription not found.");
+  if (!subscriptionData) {
+    throw new ApiError("Subscription not found.", 400);
+  }
+
+  const subscriptionDocumentUpdate: Partial<UserSubscription> = {};
+
+  const { guildId, userId, sellerId, subscriptionStatus } = subscriptionData;
+
+  // Check if the subscription status has changed
+  if (subscriptionStatus !== status) {
+    subscriptionDocumentUpdate.subscriptionStatus = status;
+  }
+
+  // Compare products to determine if there's a change
+  if (oldProductId) {
+    const tierForProduct = await TierPaths.tiersByProductId(
+      productId as string,
+      sellerId
+    ).get();
+
+    if (tierForProduct.empty) {
+      throw new ApiError("There is no tier with the new product ID.", 400);
     }
 
-    const { guildId, userId, sellerId } = subscriptionData;
+    const newTier = tierForProduct.docs[0].data();
 
-    // Compare products to determine if there's a change
-    if (oldProductId && currentProductId && oldProductId !== currentProductId) {
-      const tierData = await TierPaths.tiersByProductId(
-        currentProductId,
-        sellerId
-      ).get();
-
-      if (tierData.empty) {
-        throw new Error("There is no tier with the new product ID.");
-      }
-
-      const tier = tierData.docs[0].data();
-      const { discordRoles: newRoles, guildId: newGuildId } = tier;
-
-      if (guildId !== newGuildId) {
-        throw new Error(
-          "Changing the guild of a subscription is not supported."
-        );
-      }
-
-      const subscriptionDocumentUpdate: Partial<UserSubscription> = {
-        roles: newRoles,
-      };
-
-      await subscriptionSnapshot.ref.set(subscriptionDocumentUpdate, {
-        merge: true,
-      });
-
-      await DiscordRest.patch(Routes.guildMember(guildId, userId), {
-        body: {
-          roles: newRoles,
-        },
-      });
+    if (guildId !== newTier.guildId) {
+      throw new ApiError(
+        "Changing the guild of a subscription is not supported.",
+        400
+      );
     }
-  } catch (error) {
-    console.error("Error handling changed product:", error);
-    throw error;
+
+    subscriptionDocumentUpdate.roles = newTier.discordRoles;
+
+    // Check if the user is still in the guild
+    try {
+      const member = await DiscordRest.get(Routes.guildMember(guildId, userId));
+      if (member) {
+        await DiscordRest.patch(Routes.guildMember(guildId, userId), {
+          body: {
+            roles: newTier.discordRoles,
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Error updating user's roles:", error);
+    }
+  }
+
+  // Update the subscription reference in Firestore if necessary
+  if (Object.keys(subscriptionDocumentUpdate).length > 0) {
+    await subscriptionSnapshot.ref.set(subscriptionDocumentUpdate, {
+      merge: true,
+    });
   }
 };

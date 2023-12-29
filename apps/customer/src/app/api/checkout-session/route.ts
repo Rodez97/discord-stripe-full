@@ -5,6 +5,8 @@ import Stripe from "stripe";
 import { REST } from "@discordjs/rest";
 import { Routes } from "discord-api-types/v10";
 import { TierPaths } from "@stripe-discord/db-lib";
+import { ApiError } from "@stripe-discord/types";
+import { handleApiError } from "@stripe-discord/lib";
 
 const discordRest = new REST({ version: "10" }).setToken(
   process.env.DISCORD_BOT_TOKEN
@@ -19,24 +21,21 @@ export async function GET(req: Request) {
     const priceId = searchParams.get("priceId");
 
     if (!guildId) {
-      return NextResponse.json({ error: "No server id" }, { status: 400 });
+      throw new ApiError("No server id", 400);
     }
 
     if (!tierId) {
-      return NextResponse.json({ error: "No tier id" }, { status: 400 });
+      throw new ApiError("No tier id", 400);
     }
 
     if (!priceId) {
-      return NextResponse.json({ error: "No price id" }, { status: 400 });
+      throw new ApiError("No price id", 400);
     }
 
     const session = await auth();
 
     if (!session) {
-      return NextResponse.json(
-        { error: "The user is not authenticated." },
-        { status: 401 }
-      );
+      throw new ApiError("The user is not authenticated.", 401);
     }
 
     const { owner_id } = (await discordRest.get(Routes.guild(guildId))) as {
@@ -48,23 +47,17 @@ export async function GET(req: Request) {
     const tier = tierData.data();
 
     if (!tier) {
-      return NextResponse.json({ error: "Tier not found" }, { status: 404 });
+      throw new ApiError("Tier not found", 404);
     }
 
     const { id, accessToken, name, email } = session.user;
 
     if (owner_id === id) {
-      return NextResponse.json(
-        { error: "You can't subscribe to your own server" },
-        { status: 400 }
-      );
+      throw new ApiError("You can't subscribe to your own server", 400);
     }
 
     if (!name || !email) {
-      return NextResponse.json(
-        { error: "Missing user information" },
-        { status: 400 }
-      );
+      throw new ApiError("Missing user information", 400);
     }
 
     const integrationSettings = await checkStripeData(owner_id);
@@ -104,10 +97,7 @@ export async function GET(req: Request) {
       });
 
       if (existingSubscription.data.length > 0) {
-        return NextResponse.json(
-          { error: "Customer already has a subscription" },
-          { status: 400 }
-        );
+        throw new ApiError("You are already subscribed to this server", 400);
       }
     } else {
       // Create a new customer if none exists
@@ -139,7 +129,7 @@ export async function GET(req: Request) {
     });
 
     if (!checkoutSession || !checkoutSession.url) {
-      return NextResponse.json({ error: "No session found" }, { status: 500 });
+      throw new ApiError("No session found", 500);
     }
 
     // Return the URL for client-side redirection
@@ -150,18 +140,6 @@ export async function GET(req: Request) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error:", error);
-
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "There was an error creating the checkout session.",
-      },
-      {
-        status: 500,
-      }
-    );
+    return handleApiError(error);
   }
 }

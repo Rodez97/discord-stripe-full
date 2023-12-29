@@ -3,6 +3,8 @@ import { auth } from "../../../../auth";
 import { checkStripeData } from "../../../lib/stripe-utils";
 import Stripe from "stripe";
 import { UserSubscriptions } from "@stripe-discord/db-lib";
+import { ApiError } from "@stripe-discord/types";
+import { handleApiError } from "@stripe-discord/lib";
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,16 +12,13 @@ export async function GET(req: NextRequest) {
     const guildId = searchParams.get("guildId");
 
     if (!guildId) {
-      return NextResponse.json({ error: "No server id" }, { status: 400 });
+      throw new ApiError("No server id", 400);
     }
 
     const session = await auth();
 
     if (!session) {
-      return NextResponse.json(
-        { error: "The user is not authenticated." },
-        { status: 401 }
-      );
+      throw new ApiError("The user is not authenticated.", 401);
     }
 
     const { id } = session.user;
@@ -32,7 +31,10 @@ export async function GET(req: NextRequest) {
     const userSubscriptionSnapshot = await userSubscriptionRef.get();
 
     if (userSubscriptionSnapshot.empty) {
-      return NextResponse.json({ error: "No subscription" }, { status: 400 });
+      throw new ApiError(
+        "We couldn't find your subscription for this server.",
+        404
+      );
     }
 
     const userSubscription = userSubscriptionSnapshot.docs[0].data();
@@ -62,15 +64,6 @@ export async function GET(req: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error:", error);
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "There was an error creating the billing portal session.",
-      },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

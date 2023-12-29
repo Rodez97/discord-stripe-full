@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "../../../../auth";
 import { MonetizedServers, TierPaths } from "@stripe-discord/db-lib";
+import { handleApiError } from "@stripe-discord/lib";
+import { ApiError } from "@stripe-discord/types";
 
 export async function DELETE(req: NextRequest) {
   try {
@@ -8,20 +10,31 @@ export async function DELETE(req: NextRequest) {
     const tierId = data.tierId;
 
     if (!tierId || typeof tierId !== "string") {
-      return NextResponse.json({ error: "Invalid tier id" }, { status: 400 });
+      throw new ApiError("Invalid tier id", 400);
     }
 
     const session = await auth();
 
     if (!session) {
-      return NextResponse.json(
-        { error: "The user is not authenticated." },
-        { status: 401 }
-      );
+      throw new ApiError("The user is not authenticated.", 401);
     }
 
-    const tierRef = TierPaths.tier(tierId);
-    await tierRef.delete();
+    // Use a transaction to delete the tier and update the server count
+    const db = TierPaths.collection.firestore;
+    await db.runTransaction(async (transaction) => {
+      const tierRef = TierPaths.tier(tierId);
+      const tier = (await transaction.get(tierRef)).data();
+
+      if (!tier) {
+        throw new ApiError("The tier does not exist.", 400);
+      }
+
+      if (tier.sellerId !== session.user.id) {
+        throw new ApiError("The user is not the owner of the tier.", 403);
+      }
+
+      transaction.delete(tierRef);
+    });
 
     // Return the URL for client-side redirection
     return NextResponse.json(
@@ -33,19 +46,7 @@ export async function DELETE(req: NextRequest) {
       }
     );
   } catch (error) {
-    console.error("Error:", error);
-    let errorMessage = "Unknown error";
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
-    return NextResponse.json(
-      {
-        error: errorMessage,
-      },
-      {
-        status: 500,
-      }
-    );
+    return handleApiError(error);
   }
 }
 
@@ -54,17 +55,14 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const guildId = searchParams.get("guildId");
 
-    if (!guildId || typeof guildId !== "string") {
-      return NextResponse.json({ error: "Invalid guild id" }, { status: 400 });
+    if (!guildId) {
+      throw new ApiError("Guild ID is missing or invalid", 400);
     }
 
     const session = await auth();
 
     if (!session) {
-      return NextResponse.json(
-        { error: "The user is not authenticated." },
-        { status: 401 }
-      );
+      throw new ApiError("The user is not authenticated.", 401);
     }
 
     const user = session.user;
@@ -72,10 +70,7 @@ export async function GET(req: NextRequest) {
     const isSubscribed = user.subscription;
 
     if (!isSubscribed) {
-      return NextResponse.json(
-        { error: "The user is not subscribed." },
-        { status: 403 }
-      );
+      throw new ApiError("The user is not subscribed.", 403);
     }
 
     const serverRef = MonetizedServers.monetizedServer(
@@ -86,10 +81,7 @@ export async function GET(req: NextRequest) {
     const server = (await serverRef.get()).data();
 
     if (!server.count) {
-      return NextResponse.json(
-        { error: "The server is not monetized." },
-        { status: 400 }
-      );
+      throw new ApiError("The server is not monetized.", 400);
     }
 
     const dbRef = TierPaths.userServerTiers(user.id, guildId);
@@ -106,18 +98,6 @@ export async function GET(req: NextRequest) {
       }
     );
   } catch (error) {
-    console.error("Error:", error);
-    let errorMessage = "Unknown error";
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
-    return NextResponse.json(
-      {
-        error: errorMessage,
-      },
-      {
-        status: 500,
-      }
-    );
+    return handleApiError(error);
   }
 }

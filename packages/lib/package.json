@@ -2,5 +2,8 @@
   "name": "@stripe-discord/lib",
   "version": "1.0.0",
   "main": "index.ts",
-  "types": "index.ts"
+  "types": "index.ts",
+  "devDependencies": {
+    "@stripe-discord/types": "*"
+  }
 }

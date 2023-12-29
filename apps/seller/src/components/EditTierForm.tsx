@@ -15,7 +15,7 @@ import {
 } from "@mui/material";
 import { useRouter } from "next/navigation";
 import BenefitsControl from "./BenefitsControl";
-import { editTierValidationSchema } from "../validation-schemas/tier";
+import { editTierValidationSchema } from "../lib/validationSchemas";
 import Main from "@stripe-discord/ui/components/Main";
 import CommonNavbar from "@stripe-discord/ui/components/CommonNavbar";
 import Form from "@stripe-discord/ui/components/Form";

@@ -27,3 +27,15 @@ export const editTierValidationSchema = yup.object({
     .of(yup.string())
     .required("At least one role is required"),
 });
+
+export const stripeSettingsValidationSchema = yup.object({
+  stripePublishableKey: yup.string().required(),
+  stripeSecretKey: yup.string().required(),
+  stripeWebhookSecret: yup.string().required(),
+});
+
+export const guildValidationSchema = yup.object({
+  id: yup.string().required(),
+  name: yup.string().required(),
+  icon: yup.string(),
+});

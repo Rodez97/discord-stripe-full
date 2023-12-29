@@ -3,16 +3,15 @@ import { Routes } from "discord-api-types/v10";
 import { NextRequest, NextResponse } from "next/server";
 import auth from "../../../middleware";
 import { UserSubscriptions } from "@stripe-discord/db-lib";
+import { ApiError } from "@stripe-discord/types";
+import { handleApiError } from "@stripe-discord/lib";
 
 export async function GET() {
   try {
     const session = await auth();
 
     if (!session) {
-      return NextResponse.json(
-        { error: "The user is not authenticated." },
-        { status: 401 }
-      );
+      throw new ApiError("The user is not authenticated.", 401);
     }
 
     const user = session.user;
@@ -29,16 +28,7 @@ export async function GET() {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error:", error);
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "There was an error fetching the user's subscriptions.",
-      },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
 
@@ -52,16 +42,13 @@ export async function POST(req: NextRequest) {
     const guildId = data.guildId;
 
     if (!guildId || typeof guildId !== "string") {
-      return NextResponse.json({ error: "No server id" }, { status: 400 });
+      throw new ApiError("No server id", 400);
     }
 
     const session = await auth();
 
     if (!session) {
-      return NextResponse.json(
-        { error: "The user is not authenticated." },
-        { status: 401 }
-      );
+      throw new ApiError("The user is not authenticated.", 401);
     }
 
     const user = session.user;
@@ -75,7 +62,10 @@ export async function POST(req: NextRequest) {
     const userSubscriptionSnapshot = await userSubscriptionRef.get();
 
     if (userSubscriptionSnapshot.empty) {
-      return NextResponse.json({ error: "No subscription" }, { status: 400 });
+      throw new ApiError(
+        "We couldn't find your subscription for this server.",
+        404
+      );
     }
 
     const userSubscription = userSubscriptionSnapshot.docs[0].data();
@@ -83,9 +73,9 @@ export async function POST(req: NextRequest) {
     const { subscriptionStatus, roles } = userSubscription;
 
     if (subscriptionStatus !== "active" && subscriptionStatus !== "trialing") {
-      return NextResponse.json(
-        { error: "Subscription not active" },
-        { status: 400 }
+      throw new ApiError(
+        "Your subscription for this server is not active.",
+        400
       );
     }
 
@@ -115,15 +105,6 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error:", error);
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "There was an error adding the role to the user.",
-      },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

@@ -1,3 +1,4 @@
+import type Stripe from "stripe";
 export type Customer = {
   userId: string;
   stripeCustomerId: string;
@@ -5,7 +6,6 @@ export type Customer = {
   stripeSubscriptionItemId: string;
   stripeSubscriptionStatus: string;
   stripeSubscriptionPriceId: string;
-  numberOfGuilds: number;
   stripePublishableKey: string;
   stripeSecretKey: string;
   stripeWebhookSecret: string;
@@ -46,7 +46,7 @@ export type StripeKeys = {
 export type UserSubscription = {
   userId: string;
   subscriptionId: string;
-  subscriptionStatus: string;
+  subscriptionStatus: Stripe.Subscription.Status;
   customerId: string;
   guildId: string;
   roles: string[];
@@ -59,3 +59,9 @@ export type UserSubscription = {
 export type WithSubmit<T> = T & {
   submit: unknown;
 };
+
+export class ApiError extends Error {
+  constructor(message: string, public status: number) {
+    super(message);
+  }
+}
