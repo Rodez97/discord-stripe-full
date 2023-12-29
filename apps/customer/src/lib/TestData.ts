@@ -18,7 +18,7 @@ const generateTestDataSet = (count: number): UserSubscription[] => {
     testData.push({
       userId: generateRandomString(10),
       subscriptionId: generateRandomString(10),
-      subscriptionStatus: i % 2 === 0 ? "Active" : "Inactive",
+      subscriptionStatus: i % 2 === 0 ? "active" : "canceled",
       customerId: generateRandomString(8),
       guildId: generateRandomString(12),
       roles: ["Member", "Subscriber"],
