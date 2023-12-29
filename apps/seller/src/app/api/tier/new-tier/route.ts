@@ -1,11 +1,10 @@
 import { auth } from "../../../../../auth";
-import { checkStripeData } from "../../../../lib/stripe-utils";
 import Stripe from "stripe";
 import { firestore } from "firebase-admin";
 import { NextRequest, NextResponse } from "next/server";
 import { APIRole } from "discord-api-types/v10";
 import { newTierValidationSchema } from "../../../../lib/validationSchemas";
-import { TierPaths } from "@stripe-discord/db-lib";
+import { TierPaths, checkStripeData } from "@stripe-discord/db-lib";
 import { ApiError, DiscordTierWithPrices } from "@stripe-discord/types";
 import { handleApiError } from "@stripe-discord/lib";
 

@@ -1,25 +1,28 @@
-import { CustomerPaths } from "@stripe-discord/db-lib";
+import { ApiError } from "@stripe-discord/types";
+import { CustomerPaths } from "./firestore-db-paths";
 
 export const checkStripeData = async (userId: string) => {
   const customerRef = CustomerPaths.customerByUserId(userId);
   const integrationSettings = (await customerRef.get()).data();
 
   if (!integrationSettings) {
-    throw new Error("No settings found, please, set them up");
+    throw new ApiError("No settings found, please, set them up", 400);
   }
 
   const { stripeWebhookSecret, stripeSecretKey, stripeSubscriptionStatus } =
     integrationSettings;
 
   if (!stripeWebhookSecret) {
-    throw new Error(
-      "No webhook secret found in your settings, please, make sure to set up the required keys."
+    throw new ApiError(
+      "No webhook secret found in your settings, please, make sure to set up the required keys.",
+      400
     );
   }
 
   if (!stripeSecretKey) {
-    throw new Error(
-      "No stripe secret key found, please, make sure to set up the required keys."
+    throw new ApiError(
+      "No stripe secret key found, please, make sure to set up the required keys.",
+      400
     );
   }
 
@@ -27,8 +30,9 @@ export const checkStripeData = async (userId: string) => {
     stripeSubscriptionStatus !== "active" &&
     stripeSubscriptionStatus !== "trialing"
   ) {
-    throw new Error(
-      "There is a problem with your subscription, verify that it is active to use this feature."
+    throw new ApiError(
+      "There is a problem with your subscription, verify that it is active to use this feature.",
+      400
     );
   }
 

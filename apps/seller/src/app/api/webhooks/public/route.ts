@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { checkStripeData } from "../../../../lib/stripe-utils";
-import { TierPaths, UserSubscriptions } from "@stripe-discord/db-lib";
+import {
+  TierPaths,
+  UserSubscriptions,
+  checkStripeData,
+} from "@stripe-discord/db-lib";
 import { REST } from "@discordjs/rest";
 import { ApiError, UserSubscription } from "@stripe-discord/types";
 import { APIPartialGuild, Routes } from "discord-api-types/v10";

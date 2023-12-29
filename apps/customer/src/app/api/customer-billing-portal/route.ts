@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "../../../../auth";
-import { checkStripeData } from "../../../lib/stripe-utils";
 import Stripe from "stripe";
-import { UserSubscriptions } from "@stripe-discord/db-lib";
+import { UserSubscriptions, checkStripeData } from "@stripe-discord/db-lib";
 import { ApiError } from "@stripe-discord/types";
 import { handleApiError } from "@stripe-discord/lib";
 

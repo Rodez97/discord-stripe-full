@@ -1,11 +1,11 @@
 import { MonetizedServers } from "@stripe-discord/db-lib";
 import { NextRequest, NextResponse } from "next/server";
-import { APIGuild } from "discord-api-types/v10";
+import { APIGuild, Routes } from "discord-api-types/v10";
 import { ApiError, MonetizedServer } from "@stripe-discord/types";
 import { auth } from "../../../../auth";
-import { checkBotInServer } from "../../../lib/DiscordGuildHelpers";
 import { handleApiError } from "@stripe-discord/lib";
 import { guildValidationSchema } from "../../../lib/validationSchemas";
+import { REST } from "@discordjs/rest";
 
 export async function GET() {
   try {
@@ -132,4 +132,23 @@ export async function PUT(req: NextRequest) {
   } catch (error) {
     return handleApiError(error);
   }
+}
+
+// Utils
+async function checkBotInServer(serverId: string) {
+  try {
+    const discordRest = new REST({ version: "10" }).setToken(
+      process.env.DISCORD_BOT_TOKEN
+    );
+
+    const checkBot = await discordRest.get(Routes.guild(serverId));
+
+    if (checkBot) {
+      return true;
+    }
+  } catch (error) {
+    console.error("Error:", error);
+  }
+
+  return false;
 }
