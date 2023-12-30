@@ -114,6 +114,7 @@ const ServerCard: React.FC<ServerCardProps> = ({ guild, mutate }) => {
               </IconButton>
             }
             title={guild.name}
+            titleTypographyProps={{ noWrap: true, width: 150 }}
           />
           <CardMedia
             sx={{ height: 100, backgroundSize: "contain" }}

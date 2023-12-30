@@ -28,5 +28,6 @@ declare namespace NodeJS {
     NEXTAUTH_URL: string;
     NEXT_PUBLIC_MAIN_URL: string;
     STRIPE_WEBHOOK_SECRET: string;
+    NEXT_PUBLIC_CUSTOMER_URL: string;
   }
 }

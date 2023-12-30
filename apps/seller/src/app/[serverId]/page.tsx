@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { Button } from "@mui/material";
+import { Alert, AlertTitle, Button, Typography } from "@mui/material";
 import TierCard from "../../components/TierCard";
 import useSWR, { Fetcher } from "swr";
 import { mainFetcher } from "@stripe-discord/lib";
@@ -58,16 +58,41 @@ function TiersPage({ params: { serverId } }: { params: { serverId: string } }) {
       {tiers.length === 0 ? (
         <Empty variant="h5">No tiers found...</Empty>
       ) : (
-        <CardsContainer>
-          {tiers.map((tier) => (
-            <TierCard
-              key={tier.id}
-              tier={tier as DiscordTierWithPrices}
-              mutate={mutate}
-              serverId={serverId}
-            />
-          ))}
-        </CardsContainer>
+        <>
+          <Alert
+            severity="info"
+            variant="outlined"
+            sx={{
+              maxWidth: 600,
+              margin: "auto",
+            }}
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                href={`${process.env.NEXT_PUBLIC_CUSTOMER_URL}/tiers/${serverId}`}
+                target="_blank"
+              >
+                Visit
+              </Button>
+            }
+          >
+            <AlertTitle>Seller page url for this server:</AlertTitle>
+            <Typography
+              noWrap
+            >{`${process.env.NEXT_PUBLIC_CUSTOMER_URL}/tiers/${serverId}`}</Typography>
+          </Alert>
+          <CardsContainer>
+            {tiers.map((tier) => (
+              <TierCard
+                key={tier.id}
+                tier={tier as DiscordTierWithPrices}
+                mutate={mutate}
+                serverId={serverId}
+              />
+            ))}
+          </CardsContainer>
+        </>
       )}
     </Main>
   );
