@@ -10,7 +10,6 @@ import { StripeKeys } from "@stripe-discord/types";
 const fetcher: Fetcher<
   {
     settings: StripeKeys;
-    webhookUrl: string;
   },
   string
 > = (apiUrl) => mainFetcher(apiUrl);
@@ -32,13 +31,7 @@ async function StripeSettingsPage() {
     );
   }
 
-  return (
-    <StripeSettingsForm
-      settings={data.settings}
-      mutate={mutate}
-      webhookUrl={data.webhookUrl}
-    />
-  );
+  return <StripeSettingsForm settings={data.settings} mutate={mutate} />;
 }
 
 export default StripeSettingsPage;
