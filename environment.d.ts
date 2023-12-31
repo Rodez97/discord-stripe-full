@@ -10,7 +10,6 @@ declare namespace NodeJS {
     STRIPE_SECRET_KEY: string;
     NEXT_PUBLIC_SITE_NAME: string;
     NEXT_PUBLIC_STRIPE_PRICE_ID: string;
-    NEXT_PUBLIC_STRIPE_WEBHOOK_BASEURL: string;
 
     FIREBASE_ADMIN_TYPE: string;
     FIREBASE_ADMIN_PROJECT_ID: string;

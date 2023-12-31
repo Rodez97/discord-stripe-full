@@ -31,7 +31,6 @@ export async function GET() {
     return NextResponse.json(
       {
         settings,
-        webhookUrl: `${process.env.NEXT_PUBLIC_STRIPE_WEBHOOK_BASEURL}?sellerId=${user.id}`,
       },
       {
         status: 200,

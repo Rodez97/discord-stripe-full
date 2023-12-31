@@ -18,6 +18,7 @@ import Form from "@stripe-discord/ui/components/Form";
 import { controlledFetch } from "@stripe-discord/lib";
 import { StripeKeys, WithSubmit } from "@stripe-discord/types";
 import useGlobalElements from "@stripe-discord/ui/hooks/useGlobalElements";
+import { useSession } from "next-auth/react";
 
 const validationSchema = yup.object({
   stripePublishableKey: yup.string().required(),
@@ -27,16 +28,15 @@ const validationSchema = yup.object({
 
 function StripeSettingsForm({
   settings,
-  webhookUrl,
   mutate,
 }: {
   settings: StripeKeys;
-  webhookUrl: string;
   mutate: KeyedMutator<{
     settings: StripeKeys;
-    webhookUrl: string;
   }>;
 }) {
+  const { data: session } = useSession();
+  const webhookUrl = `${window.location.origin}?sellerId=${session?.user?.id}`;
   const { openLoadingBackdrop, closeLoadingBackdrop, openSnackbar } =
     useGlobalElements();
 
@@ -72,7 +72,6 @@ function StripeSettingsForm({
           }
           return {
             settings: values,
-            webhookUrl: prev.webhookUrl,
           };
         });
 
