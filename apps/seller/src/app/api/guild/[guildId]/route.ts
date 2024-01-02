@@ -19,15 +19,11 @@ export async function DELETE(
       throw new ApiError("The user is not authenticated.", 401);
     }
 
-    const user = session.user;
+    const { id, subscription } = session.user;
 
-    const isSubscribed = user.subscription;
-
-    if (!isSubscribed) {
+    if (!subscription) {
       throw new ApiError("The user is not subscribed.", 403);
     }
-
-    const { id } = user;
 
     const batch = firestore().batch();
 
@@ -73,20 +69,16 @@ export async function GET(
 
     const user = session.user;
 
-    const isSubscribed = user.subscription;
-
-    if (!isSubscribed) {
+    if (!user.subscription) {
       throw new ApiError("The user is not subscribed.", 403);
     }
 
-    const serverRef = MonetizedServers.monetizedServer(
+    const serverSnapshot = await MonetizedServers.monetizedServer(
       guildId,
       user.id
-    ).count();
+    ).get();
 
-    const server = (await serverRef.get()).data();
-
-    if (!server.count) {
+    if (serverSnapshot.empty) {
       throw new ApiError("The server is not monetized.", 400);
     }
 
@@ -98,6 +90,7 @@ export async function GET(
     return NextResponse.json(
       {
         tiers: res.empty ? [] : res.docs.map((doc) => doc.data()),
+        server: serverSnapshot.docs[0].data(),
       },
       {
         status: 200,

@@ -2,13 +2,13 @@
 import React from "react";
 import { Box, Button, Typography } from "@mui/material";
 import useSWR, { Fetcher } from "swr";
-import ErrorPage from "../error";
 import { useSearchParams } from "next/navigation";
 import LoadingPage from "@stripe-discord/ui/components/LoadingPage";
 import { mainFetcher } from "@stripe-discord/lib";
 import Main from "@stripe-discord/ui/components/Main";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
+import ErrorPage from "../../error";
 
 const fetcher: Fetcher<
   {

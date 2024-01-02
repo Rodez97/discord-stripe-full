@@ -5,6 +5,7 @@ import { CssBaseline } from "@mui/material";
 import Body from "@stripe-discord/ui/components/Body";
 import { THEME } from "@stripe-discord/ui";
 import GlobalElementsProvider from "@stripe-discord/ui/components/GlobalElementsProvider";
+import { Roboto } from "next/font/google";
 
 // Disable all logging in production
 if (process.env.NEXT_PUBLIC_MODE === "production") {
@@ -12,6 +13,12 @@ if (process.env.NEXT_PUBLIC_MODE === "production") {
   console.warn = () => {};
   console.error = () => {};
 }
+
+const roboto = Roboto({
+  weight: ["300", "400", "500", "700"],
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export default function RootLayout({
   // Layouts must accept a children prop.
@@ -22,7 +29,7 @@ export default function RootLayout({
 }) {
   return (
     <ThemeProvider theme={THEME}>
-      <html lang="en">
+      <html lang="en" className={roboto.className}>
         <head>
           <meta charSet="utf-8" />
           <meta name="theme-color" content={THEME.palette.primary.main} />
@@ -35,16 +42,6 @@ export default function RootLayout({
           <meta
             name="keywords"
             content="discord, stripe, discord stripe, discord stripe bot, discord bot, stripe bot"
-          />
-          <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link
-            rel="preconnect"
-            href="https://fonts.gstatic.com"
-            crossOrigin={"anonymous"}
-          />
-          <link
-            rel="stylesheet"
-            href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap"
           />
         </head>
         <Body>

@@ -1,7 +1,7 @@
 import React from "react";
-import { createCheckoutSession } from "../../lib/InternalAPIActions";
-import EmbeddedCheckoutPage from "../../components/EmbeddedCheckout";
-import { auth } from "../../../auth";
+import { createCheckoutSession } from "../../../lib/InternalAPIActions";
+import EmbeddedCheckoutPage from "../../../components/EmbeddedCheckout";
+import { auth } from "../../../../auth";
 
 async function getData() {
   const session = await auth();

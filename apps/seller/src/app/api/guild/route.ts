@@ -17,19 +17,8 @@ export async function GET() {
 
     const user = session.user;
 
-    const isSubscribed = user.subscription;
-
-    if (!isSubscribed) {
+    if (!user.subscription) {
       throw new ApiError("The user is not subscribed.", 403);
-    }
-
-    const monetizedGuildsCountSnapshot =
-      await MonetizedServers.monetizedServers(user.id).count().get();
-
-    const totalGuilds = monetizedGuildsCountSnapshot.data().count;
-
-    if (totalGuilds >= 10) {
-      throw new ApiError("You can only add 10 servers.", 403);
     }
 
     const request = await fetch("https://discord.com/api/users/@me/guilds", {
@@ -80,9 +69,7 @@ export async function PUT(req: NextRequest) {
 
     const user = session.user;
 
-    const isSubscribed = user.subscription;
-
-    if (!isSubscribed) {
+    if (!user.subscription) {
       throw new ApiError("The user is not subscribed.", 403);
     }
 
@@ -102,23 +89,20 @@ export async function PUT(req: NextRequest) {
       ownerId: user.id,
     };
 
-    const serverSnapshot = await MonetizedServers.monetizedServer(
-      serverData.id,
-      user.id
-    )
-      .count()
-      .get();
+    const db = MonetizedServers.collection.firestore;
 
-    // Check if the server already exists
-    const serverSnapshotData = serverSnapshot.data();
+    await db.runTransaction(async (transaction) => {
+      const serverRef = MonetizedServers.monetizedServerById(serverData.id);
 
-    if (serverSnapshotData.count) {
-      throw new ApiError("The server is already monetized.", 400);
-    }
+      const serverSnapshot = await transaction.get(serverRef);
 
-    const serverRef = MonetizedServers.monetizedServerById(serverData.id);
+      // Check if the server already exists
+      if (serverSnapshot.exists) {
+        throw new ApiError("The server is already monetized.", 400);
+      }
 
-    await serverRef.set(serverData);
+      transaction.set(serverRef, serverData);
+    });
 
     // Return the URL for client-side redirection
     return NextResponse.json(

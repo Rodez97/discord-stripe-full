@@ -1,6 +1,12 @@
 import React, { createContext, useState } from "react";
-import LoadingBackdrop from "./LoadingBackdrop";
-import { Snackbar } from "@mui/material";
+import dynamic from "next/dynamic";
+
+const LoadingBackdrop = dynamic(() => import("./LoadingBackdrop"), {
+  ssr: false,
+});
+const Snackbar = dynamic(() => import("@mui/material/Snackbar"), {
+  ssr: false,
+});
 
 type GlobalElementsContextType = {
   openLoadingBackdrop: () => void;

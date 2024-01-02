@@ -14,7 +14,7 @@ const fetcher: Fetcher<
   string
 > = (apiUrl) => mainFetcher(apiUrl);
 
-async function StripeSettingsPage() {
+function StripeSettingsPage() {
   const { data, error, isLoading, mutate } = useSWR("/api/settings", fetcher);
 
   if (isLoading) {
