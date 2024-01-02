@@ -89,8 +89,7 @@ export async function PATCH(req: NextRequest) {
 
     const validatedTierData = await editTierValidationSchema.validate(tierData);
 
-    const tierRef = TierPaths.tier(tierId);
-    await tierRef.update(validatedTierData);
+    await TierPaths.tier(tierId).update(validatedTierData);
 
     // Return the URL for client-side redirection
     return NextResponse.json(

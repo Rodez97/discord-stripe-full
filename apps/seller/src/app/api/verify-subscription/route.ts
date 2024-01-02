@@ -6,6 +6,10 @@ export async function POST(req: NextRequest) {
     const parsedBody = await req.json();
     const { userId } = parsedBody;
 
+    if (!userId || typeof userId !== "string") {
+      throw new Error("User ID is missing or invalid");
+    }
+
     const customerSnapshot = await CustomerPaths.customerByUserId(userId).get();
     const integrationSettings = customerSnapshot.data();
 

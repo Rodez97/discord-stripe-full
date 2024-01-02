@@ -25,9 +25,7 @@ export async function GET(req: NextRequest) {
 
     const user = session.user;
 
-    const isSubscribed = user.subscription;
-
-    if (!isSubscribed) {
+    if (!user.subscription) {
       throw new ApiError("The user is not subscribed.", 403);
     }
 
@@ -76,9 +74,7 @@ export async function PUT(req: NextRequest) {
 
     const user = session.user;
 
-    const isSubscribed = user.subscription;
-
-    if (!isSubscribed) {
+    if (!user.subscription) {
       throw new ApiError("The user is not subscribed.", 403);
     }
 

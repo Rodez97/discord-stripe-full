@@ -36,7 +36,7 @@ function StripeSettingsForm({
   }>;
 }) {
   const { data: session } = useSession();
-  const webhookUrl = `${window.location.origin}?sellerId=${session?.user?.id}`;
+  const webhookUrl = `${window.location.origin}/api/webhooks/${session?.user?.id}`;
   const { openLoadingBackdrop, closeLoadingBackdrop, openSnackbar } =
     useGlobalElements();
 
