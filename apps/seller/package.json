@@ -10,14 +10,18 @@
     "test": "jest"
   },
   "dependencies": {
-    "@stripe-discord/lib": "*",
-    "@stripe-discord/ui": "*",
     "@stripe-discord/db-lib": "*",
+    "@stripe-discord/lib": "*",
     "@stripe-discord/types": "*",
+    "@stripe-discord/ui": "*",
     "autoprefixer": "10.4.15",
     "next": "^14.0.4",
     "postcss": "8.4.28",
     "react": "18.2.0",
     "react-dom": "18.2.0"
+  },
+  "devDependencies": {
+    "eslint": "8.56.0",
+    "eslint-config-next": "14.0.4"
   }
 }

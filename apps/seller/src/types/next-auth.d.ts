@@ -9,14 +9,13 @@ declare module "next-auth" {
       id: string;
       accessToken: string;
       accessTokenExpires: number;
-      refreshToken: string;
       subscription?: boolean;
+      email: string;
     } & DefaultSession["user"];
   }
   interface Account {
     access_token: string;
     expires_in: number;
-    refresh_token: string;
   }
 }
 
@@ -27,7 +26,6 @@ declare module "@auth/core/jwt" {
     accessTokenExpires?: number;
     subscriptionValidityExpires?: number;
     subscription?: boolean;
-    refreshToken?: string;
     sub: string;
   }
 }

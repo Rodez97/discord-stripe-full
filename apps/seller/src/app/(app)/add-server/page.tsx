@@ -13,7 +13,7 @@ const fetcher: Fetcher<
   string
 > = (apiUrl) => mainFetcher(apiUrl);
 
-async function AddServer() {
+function AddServer() {
   const { data, error, isLoading } = useSWR("/api/guild", fetcher);
 
   if (isLoading) {

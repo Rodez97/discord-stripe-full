@@ -12,19 +12,14 @@ export async function GET() {
       throw new ApiError("The user is not authenticated.", 401);
     }
 
-    const user = session.user;
-
-    const isSubscribed = user.subscription;
-
-    const dbRef = MonetizedServers.monetizedServers(user.id);
-
-    const res = await dbRef.get();
+    const guilds = await MonetizedServers.monetizedServers(
+      session.user.id
+    ).get();
 
     // Return the URL for client-side redirection
     return NextResponse.json(
       {
-        isSubscribed,
-        guilds: res.empty ? [] : res.docs.map((doc) => doc.data()),
+        guilds: guilds.empty ? [] : guilds.docs.map((doc) => doc.data()),
       },
       {
         status: 200,

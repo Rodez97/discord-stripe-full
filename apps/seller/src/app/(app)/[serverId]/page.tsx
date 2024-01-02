@@ -2,10 +2,10 @@
 import React from "react";
 import Link from "next/link";
 import { Alert, AlertTitle, Button, Typography } from "@mui/material";
-import TierCard from "../../components/TierCard";
+import TierCard from "../../../components/TierCard";
 import useSWR, { Fetcher } from "swr";
 import { mainFetcher } from "@stripe-discord/lib";
-import ErrorPage from "../error";
+import ErrorPage from "../../error";
 import LoadingPage from "@stripe-discord/ui/components/LoadingPage";
 import Main from "@stripe-discord/ui/components/Main";
 import CommonNavbar from "@stripe-discord/ui/components/CommonNavbar";

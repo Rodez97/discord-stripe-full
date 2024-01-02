@@ -18,16 +18,9 @@ export async function GET() {
       throw new ApiError("The user is not authenticated.", 401);
     }
 
-    const user = session.user;
-    const userEmail = user.email;
-
-    if (!userEmail) {
-      throw new ApiError("No email found for the user.", 400);
-    }
-
     // Check if a customer with the same email already exists
     const existingCustomer = await stripe.customers.list({
-      email: userEmail,
+      email: session.user.email,
       limit: 1,
     });
 

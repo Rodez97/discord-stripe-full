@@ -1,9 +1,9 @@
 "use client";
 import React from "react";
-import NewTierForm from "../../../components/NewTierForm";
+import NewTierForm from "../../../../components/NewTierForm";
 import useSWR, { Fetcher } from "swr";
 import { mainFetcher } from "@stripe-discord/lib";
-import ErrorPage from "../../error";
+import ErrorPage from "../../../error";
 import LoadingPage from "@stripe-discord/ui/components/LoadingPage";
 
 const fetcher: Fetcher<
