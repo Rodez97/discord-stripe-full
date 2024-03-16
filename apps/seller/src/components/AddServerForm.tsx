@@ -16,12 +16,12 @@ import {
 } from "@mui/material";
 import Link from "next/link";
 import * as yup from "yup";
-import { controlledFetch } from "@stripe-discord/lib";
 import Main from "@stripe-discord/ui/components/Main";
 import CommonNavbar from "@stripe-discord/ui/components/CommonNavbar";
 import Form from "@stripe-discord/ui/components/Form";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
 import useGlobalElements from "@stripe-discord/ui/hooks/useGlobalElements";
+import { createGuild } from "lib/guild/createGuild";
 
 type FormType = {
   id: string;
@@ -64,10 +64,7 @@ function AddServerForm({ availableServers }: { availableServers: any[] }) {
       try {
         openLoadingBackdrop();
 
-        await controlledFetch(`/api/guild`, {
-          method: "PUT",
-          body: JSON.stringify(data),
-        });
+        await createGuild(data);
 
         setErrors({});
         setStatus({ success: true });

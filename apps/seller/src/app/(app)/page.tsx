@@ -1,43 +1,17 @@
-"use client";
 import React from "react";
 import Link from "next/link";
 import { Button } from "@mui/material";
 import ServerCard from "../../components/ServerCard";
-import useSWR, { Fetcher } from "swr";
-import { mainFetcher } from "@stripe-discord/lib";
-import ErrorPage from "../error";
-import LoadingPage from "@stripe-discord/ui/components/LoadingPage";
 import Main from "@stripe-discord/ui/components/Main";
 import CommonNavbar from "@stripe-discord/ui/components/CommonNavbar";
 import Empty from "@stripe-discord/ui/components/Empty";
 import CardsContainer from "@stripe-discord/ui/components/CardsContainer";
-import { MonetizedServer } from "@stripe-discord/types";
 import SettingsIcon from "@mui/icons-material/Settings";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
+import { getGuilds } from "lib/guild/getGuilds";
 
-const fetcher: Fetcher<
-  {
-    guilds: MonetizedServer[];
-  },
-  string
-> = (apiUrl) => mainFetcher(apiUrl);
-
-function MonetizedServersPage() {
-  const { data, error, isLoading, mutate } = useSWR("/api/guilds", fetcher);
-
-  if (isLoading) {
-    return <LoadingPage />;
-  }
-
-  if (error) {
-    return <ErrorPage error={error} />;
-  }
-
-  if (!data) {
-    return <ErrorPage error={new Error("There are no guilds")} />;
-  }
-
-  const { guilds } = data;
+async function MonetizedServersPage() {
+  const guilds = await getGuilds();
 
   return (
     <Main>
@@ -68,7 +42,7 @@ function MonetizedServersPage() {
       ) : (
         <CardsContainer>
           {guilds.map((guild) => (
-            <ServerCard key={guild.id} guild={guild} mutate={mutate} />
+            <ServerCard key={guild.id} guild={guild} />
           ))}
         </CardsContainer>
       )}

@@ -19,9 +19,9 @@ import { editTierValidationSchema } from "../lib/validationSchemas";
 import Main from "@stripe-discord/ui/components/Main";
 import CommonNavbar from "@stripe-discord/ui/components/CommonNavbar";
 import Form from "@stripe-discord/ui/components/Form";
-import { controlledFetch } from "@stripe-discord/lib";
 import { DiscordTier } from "@stripe-discord/types";
 import useGlobalElements from "@stripe-discord/ui/hooks/useGlobalElements";
+import { updateTier } from "lib/tier/updateTier";
 
 type FormType = {
   nickname: string;
@@ -80,13 +80,7 @@ function EditTierForm({
       try {
         openLoadingBackdrop();
 
-        await controlledFetch(`/api/tier/update-tier`, {
-          method: "PATCH",
-          body: JSON.stringify({
-            tierId: id,
-            ...data,
-          }),
-        });
+        await updateTier(id, serverId, data);
 
         setErrors({});
         setStatus({ success: true });

@@ -18,8 +18,8 @@ import { newTierValidationSchema } from "../lib/validationSchemas";
 import Main from "@stripe-discord/ui/components/Main";
 import CommonNavbar from "@stripe-discord/ui/components/CommonNavbar";
 import Form from "@stripe-discord/ui/components/Form";
-import { controlledFetch } from "@stripe-discord/lib";
 import useGlobalElements from "@stripe-discord/ui/hooks/useGlobalElements";
+import { createTier } from "lib/tier/createTier";
 
 type TierFormType = {
   nickname: string;
@@ -72,13 +72,8 @@ function NewTierForm({
       try {
         openLoadingBackdrop();
 
-        await controlledFetch(`/api/tier/new-tier`, {
-          method: "PUT",
-          body: JSON.stringify({
-            serverId,
-            ...data,
-          }),
-        });
+        await createTier(serverId, data);
+
         setErrors({});
         setStatus({ success: true });
         router.push(`/${serverId}`);

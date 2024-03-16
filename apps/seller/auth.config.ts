@@ -93,6 +93,7 @@ export const authConfig = {
       return null;
     },
   },
+  trustHost: true,
 } satisfies NextAuthConfig;
 
 async function refreshSubscriptionStatus(token: JWT): Promise<JWT> {

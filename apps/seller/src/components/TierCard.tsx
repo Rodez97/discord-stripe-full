@@ -17,23 +17,27 @@ import {
 } from "@mui/material";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { KeyedMutator } from "swr";
-import { DiscordTier, DiscordTierWithPrices } from "@stripe-discord/types";
+import { DiscordTierWithPrices } from "@stripe-discord/types";
 import MainCard from "@stripe-discord/ui/components/MainCard";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import useGlobalElements from "@stripe-discord/ui/hooks/useGlobalElements";
+import { deleteTier } from "lib/tier/deleteTier";
 
 interface TierCardProps {
   tier: DiscordTierWithPrices;
   serverId: string;
-  mutate: KeyedMutator<{
-    tiers: DiscordTier[];
-  }>;
 }
 
-const TierCard: React.FC<TierCardProps> = ({ tier, serverId, mutate }) => {
+function formatCurrency(value: number, currency: string) {
+  return Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+  }).format(value);
+}
+
+const TierCard: React.FC<TierCardProps> = ({ tier, serverId }) => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
@@ -63,19 +67,7 @@ const TierCard: React.FC<TierCardProps> = ({ tier, serverId, mutate }) => {
 
       openLoadingBackdrop();
 
-      await fetch(`/api/tier`, {
-        method: "DELETE",
-        body: JSON.stringify({ tierId: tier.id }),
-      });
-
-      mutate((prev) => {
-        if (!prev) {
-          return prev;
-        }
-        return {
-          tiers: prev.tiers.filter((t) => t.id !== tier.id),
-        };
-      });
+      await deleteTier(tier.id, serverId);
     } catch (error) {
       console.error(error);
       openSnackbar({
@@ -94,7 +86,13 @@ const TierCard: React.FC<TierCardProps> = ({ tier, serverId, mutate }) => {
     <>
       <MainCard variant="outlined">
         <CardHeader
-          titleTypographyProps={{ variant: "h6" }}
+          titleTypographyProps={{
+            variant: "h6",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            width: 150,
+          }}
           title={tier.nickname}
           action={
             <IconButton
@@ -112,10 +110,7 @@ const TierCard: React.FC<TierCardProps> = ({ tier, serverId, mutate }) => {
 
         <CardContent>
           <Typography gutterBottom>
-            {Intl.NumberFormat("en-US", {
-              style: "currency",
-              currency: tier.currency,
-            }).format(tier.monthlyPriceQty)}{" "}
+            {formatCurrency(tier.monthlyPriceQty, tier.currency)}{" "}
             <Typography
               component="span"
               textAlign="center"
@@ -127,10 +122,7 @@ const TierCard: React.FC<TierCardProps> = ({ tier, serverId, mutate }) => {
 
           {tier.yearlyPriceQty && tier.yearlyPriceId && (
             <Typography gutterBottom>
-              {Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: tier.currency,
-              }).format(tier.yearlyPriceQty)}{" "}
+              {formatCurrency(tier.yearlyPriceQty, tier.currency)}{" "}
               <Typography
                 component="span"
                 textAlign="center"

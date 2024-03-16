@@ -16,24 +16,20 @@ import {
   MenuItem,
 } from "@mui/material";
 import React, { useState } from "react";
-import { KeyedMutator } from "swr";
 import { useRouter } from "next/navigation";
-import { controlledFetch } from "@stripe-discord/lib";
 import { MonetizedServer } from "@stripe-discord/types";
 import MainCard from "@stripe-discord/ui/components/MainCard";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
 import DeleteIcon from "@mui/icons-material/Delete";
 import useGlobalElements from "@stripe-discord/ui/hooks/useGlobalElements";
+import { deleteGuild } from "lib/guild/deleteGuild";
 
 interface ServerCardProps {
   guild: MonetizedServer;
-  mutate: KeyedMutator<{
-    guilds: MonetizedServer[];
-  }>;
 }
 
-const ServerCard: React.FC<ServerCardProps> = ({ guild, mutate }) => {
+const ServerCard: React.FC<ServerCardProps> = ({ guild }) => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
@@ -60,18 +56,7 @@ const ServerCard: React.FC<ServerCardProps> = ({ guild, mutate }) => {
 
       openLoadingBackdrop();
 
-      await controlledFetch(`/api/guild/${guild.id}`, {
-        method: "DELETE",
-      });
-
-      mutate((prev) => {
-        if (!prev) {
-          return prev;
-        }
-        return {
-          guilds: prev.guilds.filter((g) => g.id !== guild.id),
-        };
-      });
+      await deleteGuild(guild.id);
     } catch (error) {
       console.error(error);
       openSnackbar({

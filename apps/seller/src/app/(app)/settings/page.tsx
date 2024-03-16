@@ -1,37 +1,11 @@
-"use client";
 import React from "react";
 import StripeSettingsForm from "../../../components/StripeSettingsForm";
-import useSWR, { Fetcher } from "swr";
-import ErrorPage from "../../error";
-import { mainFetcher } from "@stripe-discord/lib";
-import LoadingPage from "@stripe-discord/ui/components/LoadingPage";
-import { StripeKeys } from "@stripe-discord/types";
+import { getSettings } from "lib/settings/getSettings";
 
-const fetcher: Fetcher<
-  {
-    settings: StripeKeys;
-  },
-  string
-> = (apiUrl) => mainFetcher(apiUrl);
+async function StripeSettingsPage() {
+  const settings = await getSettings();
 
-function StripeSettingsPage() {
-  const { data, error, isLoading, mutate } = useSWR("/api/settings", fetcher);
-
-  if (isLoading) {
-    return <LoadingPage />;
-  }
-
-  if (error) {
-    return <ErrorPage error={error} />;
-  }
-
-  if (!data) {
-    return (
-      <ErrorPage error={new Error("There was an error loading settings")} />
-    );
-  }
-
-  return <StripeSettingsForm settings={data.settings} mutate={mutate} />;
+  return <StripeSettingsForm settings={settings} />;
 }
 
 export default StripeSettingsPage;

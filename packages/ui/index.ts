@@ -1,6 +1,7 @@
 "use client";
 
 import { createTheme } from "@mui/material";
+import { Roboto } from "next/font/google";
 
 // @index('./**/*.tsx', f => `export * from '${f.path}'`)
 export * from "./components/Body";
@@ -22,6 +23,12 @@ export * from "./components/Navbar";
 export * from "./hooks/useGlobalElements";
 // @endindex
 
+const roboto = Roboto({
+  weight: ["300", "400", "500", "700"],
+  subsets: ["latin"],
+  display: "swap",
+});
+
 export const THEME = createTheme({
   palette: {
     mode: "dark",
@@ -31,5 +38,8 @@ export const THEME = createTheme({
     secondary: {
       main: "#f50057",
     },
+  },
+  typography: {
+    fontFamily: roboto.style.fontFamily,
   },
 });

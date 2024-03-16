@@ -11,14 +11,13 @@ import {
   Typography,
 } from "@mui/material";
 import * as yup from "yup";
-import { KeyedMutator } from "swr";
 import Main from "@stripe-discord/ui/components/Main";
 import CommonNavbar from "@stripe-discord/ui/components/CommonNavbar";
 import Form from "@stripe-discord/ui/components/Form";
-import { controlledFetch } from "@stripe-discord/lib";
 import { StripeKeys, WithSubmit } from "@stripe-discord/types";
 import useGlobalElements from "@stripe-discord/ui/hooks/useGlobalElements";
 import { useSession } from "next-auth/react";
+import { updateSettings } from "lib/settings/updateSettings";
 
 const validationSchema = yup.object({
   stripePublishableKey: yup.string().required(),
@@ -26,15 +25,7 @@ const validationSchema = yup.object({
   stripeWebhookSecret: yup.string().required(),
 });
 
-function StripeSettingsForm({
-  settings,
-  mutate,
-}: {
-  settings: StripeKeys;
-  mutate: KeyedMutator<{
-    settings: StripeKeys;
-  }>;
-}) {
+function StripeSettingsForm({ settings }: { settings: StripeKeys }) {
   const { data: session } = useSession();
   const webhookUrl = `${window.location.origin}/api/webhooks/${session?.user?.id}`;
   const { openLoadingBackdrop, closeLoadingBackdrop, openSnackbar } =
@@ -61,19 +52,7 @@ function StripeSettingsForm({
       try {
         openLoadingBackdrop();
 
-        await controlledFetch(`/api/settings`, {
-          method: "POST",
-          body: JSON.stringify(values),
-        });
-
-        mutate((prev) => {
-          if (!prev) {
-            return prev;
-          }
-          return {
-            settings: values,
-          };
-        });
+        await updateSettings(values);
 
         setStatus({ success: true });
         setErrors({});

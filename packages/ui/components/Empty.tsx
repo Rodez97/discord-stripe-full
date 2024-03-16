@@ -4,7 +4,7 @@ import { Typography, styled } from "@mui/material";
 const Empty = styled(Typography)`
   color: gray;
   text-align: center;
-  margin-top: 3rem;
+  margin-top: 5rem;
   width: 100%;
   font-size: 2rem;
   font-weight: 300;
