@@ -34,7 +34,7 @@ function StripeSettingsForm({ settings }: { settings: StripeKeys }) {
     },
     validationSchema,
     onSubmit: async (
-      { submit, stripeWebhookSecret, ...values },
+      { submit, ...values },
       { setStatus, setErrors, setSubmitting }
     ) => {
       try {

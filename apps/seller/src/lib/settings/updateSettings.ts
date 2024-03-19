@@ -12,9 +12,7 @@ const enabled_events: Stripe.WebhookEndpointUpdateParams.EnabledEvent[] = [
   "checkout.session.completed",
 ];
 
-export const updateSettings = async (
-  keys: Omit<StripeKeys, "stripeWebhookSecret">
-) => {
+export const updateSettings = async (keys: StripeKeys) => {
   const session = await auth();
 
   if (!session) {
@@ -47,6 +45,11 @@ export const updateSettings = async (
     webhook = await stripe.webhookEndpoints.update(currentWebhook.id, {
       enabled_events,
     });
+    if (!keys.stripeWebhookSecret) {
+      throw new Error(
+        "The webhook secret is missing. Please, delete the webhook on Stripe and try again."
+      );
+    }
   } else {
     webhook = await stripe.webhookEndpoints.create({
       url: webhookUrl,
