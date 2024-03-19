@@ -4,8 +4,17 @@ import { auth } from "../../../auth";
 import { CustomerPaths } from "@stripe-discord/db-lib";
 import { StripeKeys } from "@stripe-discord/types";
 import { revalidatePath } from "next/cache";
+import Stripe from "stripe";
 
-export const updateSettings = async (keys: StripeKeys) => {
+const enabled_events: Stripe.WebhookEndpointUpdateParams.EnabledEvent[] = [
+  "customer.subscription.updated",
+  "customer.subscription.deleted",
+  "checkout.session.completed",
+];
+
+export const updateSettings = async (
+  keys: Omit<StripeKeys, "stripeWebhookSecret">
+) => {
   const session = await auth();
 
   if (!session) {
@@ -18,9 +27,41 @@ export const updateSettings = async (keys: StripeKeys) => {
     throw new Error("The user is not subscribed.");
   }
 
-  await CustomerPaths.customerByUserId(user.id).set(keys, {
-    merge: true,
+  // Create or update the webhook URL in Stripe
+  const webhookUrl = `${process.env.NEXTAUTH_URL}/api/webhooks/${user.id}`;
+  const stripe = new Stripe(keys.stripeSecretKey, {
+    apiVersion: "2023-10-16",
   });
+
+  const currentWebhooks = await stripe.webhookEndpoints.list();
+
+  // Check if there is a webhook with the same URL
+  const currentWebhook = currentWebhooks.data.find(
+    (webhook) => webhook.url === webhookUrl
+  );
+
+  let webhook: Stripe.WebhookEndpoint;
+  let stripeWebhookSecret: string | undefined;
+
+  if (currentWebhook) {
+    webhook = await stripe.webhookEndpoints.update(currentWebhook.id, {
+      enabled_events,
+    });
+  } else {
+    webhook = await stripe.webhookEndpoints.create({
+      url: webhookUrl,
+      enabled_events,
+    });
+    stripeWebhookSecret = webhook.secret;
+  }
+
+  // Save the webhook secret
+  await CustomerPaths.customerByUserId(user.id).set(
+    stripeWebhookSecret ? { ...keys, stripeWebhookSecret } : keys,
+    {
+      merge: true,
+    }
+  );
 
   revalidatePath("/settings");
 };

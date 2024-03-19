@@ -1,33 +1,21 @@
 "use client";
 import React from "react";
 import { useFormik } from "formik";
-import {
-  Alert,
-  Box,
-  Button,
-  CircularProgress,
-  Paper,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { Alert, Box, Button, CircularProgress, TextField } from "@mui/material";
 import * as yup from "yup";
 import Main from "@stripe-discord/ui/components/Main";
 import CommonNavbar from "@stripe-discord/ui/components/CommonNavbar";
 import Form from "@stripe-discord/ui/components/Form";
 import { StripeKeys, WithSubmit } from "@stripe-discord/types";
 import useGlobalElements from "@stripe-discord/ui/hooks/useGlobalElements";
-import { useSession } from "next-auth/react";
 import { updateSettings } from "lib/settings/updateSettings";
 
 const validationSchema = yup.object({
   stripePublishableKey: yup.string().required(),
   stripeSecretKey: yup.string().required(),
-  stripeWebhookSecret: yup.string().required(),
 });
 
 function StripeSettingsForm({ settings }: { settings: StripeKeys }) {
-  const { data: session } = useSession();
-  const webhookUrl = `${window.location.origin}/api/webhooks/${session?.user?.id}`;
   const { openLoadingBackdrop, closeLoadingBackdrop, openSnackbar } =
     useGlobalElements();
 
@@ -46,7 +34,7 @@ function StripeSettingsForm({ settings }: { settings: StripeKeys }) {
     },
     validationSchema,
     onSubmit: async (
-      { submit, ...values },
+      { submit, stripeWebhookSecret, ...values },
       { setStatus, setErrors, setSubmitting }
     ) => {
       try {
@@ -76,15 +64,6 @@ function StripeSettingsForm({ settings }: { settings: StripeKeys }) {
       }
     },
   });
-
-  const copyWebhookUrl = async () => {
-    await navigator.clipboard.writeText(webhookUrl);
-
-    openSnackbar({
-      message: "The webhook URL has been copied to your clipboard.",
-      severity: "success",
-    });
-  };
 
   return (
     <Main>
@@ -137,23 +116,6 @@ function StripeSettingsForm({ settings }: { settings: StripeKeys }) {
               helperText={touched.stripeSecretKey && errors.stripeSecretKey}
             />
 
-            <TextField
-              label="Stripe Webhook Secret"
-              name="stripeWebhookSecret"
-              id="stripeWebhookSecret"
-              value={values.stripeWebhookSecret}
-              onBlur={handleBlur}
-              onChange={handleChange}
-              type="password"
-              disabled={isSubmitting}
-              error={Boolean(
-                errors.stripeWebhookSecret && touched.stripeWebhookSecret
-              )}
-              helperText={
-                touched.stripeWebhookSecret && errors.stripeWebhookSecret
-              }
-            />
-
             <Button type="submit" variant="contained" disabled={isSubmitting}>
               {isSubmitting ? <CircularProgress size={24} /> : "Save"}
             </Button>
@@ -162,38 +124,6 @@ function StripeSettingsForm({ settings }: { settings: StripeKeys }) {
             {errors.submit && touched.submit && (
               <Alert severity="error">{errors.submit}</Alert>
             )}
-
-            <Paper
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "1rem",
-                p: 2,
-              }}
-            >
-              <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-                Webhook URL
-              </Typography>
-              <Typography
-                variant="caption"
-                // Only one line of text
-                sx={{
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {webhookUrl}
-              </Typography>
-              <Button
-                variant="contained"
-                onClick={copyWebhookUrl}
-                disabled={isSubmitting}
-                color="info"
-              >
-                Copy to Clipboard
-              </Button>
-            </Paper>
           </Form>
         </Box>
       </Box>
